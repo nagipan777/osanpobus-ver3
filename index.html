@@ -391,7 +391,7 @@
         // スプレッドシートのデータを取得（GASのWeb APIを使用）
         async function fetchBusSchedule() {
     try {
-        const url = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+        const url = 'https://script.google.com/macros/s/AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3/exec';
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -402,6 +402,7 @@
         console.log("取得したデータ:", data);
 
         state.busSchedule = {
+            
             orange: {
                 weekday: data.orange?.weekday || [],
                 saturday: data.orange?.saturday || [],
