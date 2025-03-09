@@ -421,7 +421,7 @@ fetchAllSheetsData();
         // スプレッドシートのデータを取得（GASのWeb APIを使用）
         async function fetchBusSchedule() {
     try {
-        const url = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+        const url = GAS_WEB_APP_URL;
 
         const response = await fetch(url, {
             method: "GET",
