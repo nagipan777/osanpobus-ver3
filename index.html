@@ -595,10 +595,10 @@
             let schedule;
             let scheduleType;
 
-            if (state.isSunday) {
+            if (state.isHoliday) {
                 schedule = state.busSchedule[state.currentRoute].holiday;
-                scheduleType = '休日';
-            } else if (state.isHoliday) {
+                scheduleType = '祝日';
+            } else if (state.isSunday) {
                 schedule = state.busSchedule[state.currentRoute].holiday;
                 scheduleType = '日曜';
             } else if (day === 6) {
@@ -607,11 +607,6 @@
             } else {
                 schedule = state.busSchedule[state.currentRoute].weekday;
                 scheduleType = '平日';
-            }
-
-            if (!schedule || schedule.length === 0) {
-                timetableEl.innerHTML = '<tr><td>本日の運行はありません</td></tr>';
-                return;
             }
 
             // 時刻表のヘッダー
