@@ -584,84 +584,89 @@
 
         // 時刻表を表示
         function updateTimetableDisplay() {
-        if (!state.busSchedule || !state.busSchedule[state.currentRoute]) {
-            console.error("エラー: 選択されたルートの時刻表データが見つかりません");
-            updateStatus('not-running', '本日の運行はありません');
-            return;
+            if (!state.busSchedule || !state.busSchedule[state.currentRoute]) {
+                console.error("エラー: 選択されたルートの時刻表データが見つかりません");
+                updateStatus('not-running', '本日の運行はありません');
+                return;
+            }
+
+            const now = new Date();
+            const day = now.getDay();
+            let schedule = [];
+            let scheduleType = '平日';
+
+            if (state.isHoliday) {
+                schedule = state.busSchedule[state.currentRoute].holiday || [];
+                scheduleType = '祝日';
+            } else if (state.isSunday) {
+                schedule = state.busSchedule[state.currentRoute].holiday || [];
+                scheduleType = '日曜';
+            } else if (day === 6) {
+                schedule = state.busSchedule[state.currentRoute].saturday || [];
+                scheduleType = '土曜';
+            } else {
+                schedule = state.busSchedule[state.currentRoute].weekday || [];
+                scheduleType = '平日';
+            }
+
+            if (!Array.isArray(schedule)) {
+                console.error("エラー: schedule が配列ではありません:", schedule);
+                updateStatus('not-running', '本日の運行はありません');
+                return;
+            }
+
+            if (schedule.length === 0) {
+                updateStatus('not-running', `本日の運行はありません`);
+                return;
+            }
+
+            // 時刻表のヘッダー
+            let tableHTML = `
+                <tr>
+                    <th colspan="2">${state.currentRoute === 'orange' ? 'オレンジ' : 'グリーン'}コース（${scheduleType}）</th>
+                </tr>
+                <tr>
+                    <th>出発時刻</th>
+                    <th>状態</th>
+                </tr>
+            `;
+
+            // 時刻表の内容を構築する前に、schedule が空でないことを確認
+            if (schedule && schedule.length > 0) {
+                for (const timeStr of schedule) {
+                    const [hours, minutes] = timeStr.split(':').map(Number);
+                    const busTimeValue = hours * 60 + minutes;
+
+                    let status = '';
+                    let rowClass = '';
+
+                    const currentHour = now.getHours();
+                    const currentMinute = now.getMinutes();
+                    const currentTimeValue = currentHour * 60 + currentMinute;
+
+                    if (busTimeValue < currentTimeValue) {
+                        status = '出発済み';
+                    } else if (timeStr === state.nextBusDeparture) {
+                        status = `あと${state.minutesToNextBus}分`;
+                        rowClass = 'next';
+                    } else {
+                        const diff = busTimeValue - currentTimeValue;
+                        status = `あと${diff}分`;
+                    }
+
+                    tableHTML += `
+                        <tr class="${rowClass}">
+                            <td>${timeStr}</td>
+                            <td>${status}</td>
+                        </tr>
+                    `;
+                }
+            } else {
+                tableHTML += `<tr><td colspan="2">本日の運行はありません</td></tr>`;
+            }
+
+            timetableEl.innerHTML = tableHTML;
         }
-
-        const now = new Date();
-        const day = now.getDay();
-        let schedule = [];
-        let scheduleType = '平日';
-
-        if (state.isHoliday) {
-            schedule = state.busSchedule[state.currentRoute].holiday || [];
-            scheduleType = '祝日';
-        } else if (state.isSunday) {
-            schedule = state.busSchedule[state.currentRoute].holiday || [];
-            scheduleType = '日曜';
-        } else if (day === 6) {
-            schedule = state.busSchedule[state.currentRoute].saturday || [];
-            scheduleType = '土曜';
-        } else {
-            schedule = state.busSchedule[state.currentRoute].weekday || [];
-            scheduleType = '平日';
-        }
-
-    if (!Array.isArray(schedule)) {
-        console.error("エラー: schedule が配列ではありません:", schedule);
-        updateStatus('not-running', '本日の運行はありません');
-        return;
-    }
-
-    if (schedule.length === 0) {
-        updateStatus('not-running', `本日の運行はありません`);
-        return;
-    }
-
-    // 時刻表のヘッダー
-    let tableHTML = `
-        <tr>
-            <th colspan="2">${state.currentRoute === 'orange' ? 'オレンジ' : 'グリーン'}コース（${scheduleType}）</th>
-        </tr>
-        <tr>
-            <th>出発時刻</th>
-            <th>状態</th>
-        </tr>
-    `;
-
-    for (const timeStr of schedule) {
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        const busTimeValue = hours * 60 + minutes;
-
-        let status = '';
-        let rowClass = '';
-
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        const currentTimeValue = currentHour * 60 + currentMinute;
-
-        if (busTimeValue < currentTimeValue) {
-            status = '出発済み';
-        } else if (timeStr === state.nextBusDeparture) {
-            status = `あと${state.minutesToNextBus}分`;
-            rowClass = 'next';
-        } else {
-            const diff = busTimeValue - currentTimeValue;
-            status = `あと${diff}分`;
-        }
-
-        tableHTML += `
-            <tr class="${rowClass}">
-                <td>${timeStr}</td>
-                <td>${status}</td>
-            </tr>
-        `;
-    }
-
-    timetableEl.innerHTML = tableHTML;
-}
         
         // ページ読み込み時にアプリを初期化
         window.addEventListener('DOMContentLoaded', () => {
