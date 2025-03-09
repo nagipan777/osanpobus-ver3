@@ -391,8 +391,7 @@
         // スプレッドシートのデータを取得（GASのWeb APIを使用）
         async function fetchBusSchedule() {
     try {
-        // Google Apps Script (GAS) のデプロイURL
-        const url = 'https://script.google.com/macros/s/AKfycbwIAPY3OFzCBDU388qWGjqHhSXWa_8Qvj5MTt-8MWFCESKoK5Iw4NnQ402moWiByV6Ang/exec'; // GASのURLに変更
+        const url = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -402,17 +401,16 @@
         const data = await response.json();
         console.log("取得したデータ:", data);
 
-        // データを state に格納
         state.busSchedule = {
             orange: {
-                weekday: data.orange.weekday,
-                saturday: data.orange.saturday,
-                holiday: data.holyday.orange // 🔹 "holyday" シートのオレンジルートを格納
+                weekday: data.orange?.weekday || [],
+                saturday: data.orange?.saturday || [],
+                holiday: data.orange?.holiday || [] // 祝日・日曜用
             },
             green: {
-                weekday: data.green.weekday,
-                saturday: data.green.saturday,
-                holiday: data.holyday.green // 🔹 "holyday" シートのグリーンルートを格納
+                weekday: data.green?.weekday || [],
+                saturday: data.green?.saturday || [],
+                holiday: data.green?.holiday || [] // 祝日・日曜用
             }
         };
 
@@ -586,73 +584,84 @@
 
         // 時刻表を表示
         function updateTimetableDisplay() {
-            if (!state.busSchedule) return;
-
-            const now = new Date();
-            const day = now.getDay();
-
-            // 運行スケジュールの選択
-            let schedule;
-            let scheduleType;
-
-            if (state.isHoliday) {
-                schedule = state.busSchedule[state.currentRoute].holiday;
-                scheduleType = '祝日';
-            } else if (state.isSunday) {
-                schedule = state.busSchedule[state.currentRoute].holiday;
-                scheduleType = '日曜';
-            } else if (day === 6) {
-                schedule = state.busSchedule[state.currentRoute].saturday;
-                scheduleType = '土曜';
-            } else {
-                schedule = state.busSchedule[state.currentRoute].weekday;
-                scheduleType = '平日';
-            }
-
-            // 時刻表のヘッダー
-            let tableHTML = `
-                <tr>
-                    <th colspan="2">${state.currentRoute === 'orange' ? 'オレンジ' : 'グリーン'}コース（${scheduleType}）</th>
-                </tr>
-                <tr>
-                    <th>出発時刻</th>
-                    <th>状態</th>
-                </tr>
-            `;
-
-            // 時刻表の内容
-            for (const timeStr of schedule) {
-                const [hours, minutes] = timeStr.split(':').map(Number);
-                const busTimeValue = hours * 60 + minutes;
-
-                let status = '';
-                let rowClass = '';
-
-                const now = new Date();
-                const currentHour = now.getHours();
-                const currentMinute = now.getMinutes();
-                const currentTimeValue = currentHour * 60 + currentMinute;
-
-                if (busTimeValue < currentTimeValue) {
-                    status = '出発済み';
-                } else if (timeStr === state.nextBusDeparture) {
-                    status = `あと${state.minutesToNextBus}分`;
-                    rowClass = 'next';
-                } else {
-                    const diff = busTimeValue - currentTimeValue;
-                    status = `あと${diff}分`;
-                }
-
-                tableHTML += `
-                    <tr class="${rowClass}">
-                        <td>${timeStr}</td>
-                        <td>${status}</td>
-                    </tr>
-                `;
-            }
-
-            timetableEl.innerHTML = tableHTML;
+        if (!state.busSchedule || !state.busSchedule[state.currentRoute]) {
+            console.error("エラー: 選択されたルートの時刻表データが見つかりません");
+            updateStatus('not-running', '本日の運行はありません');
+            return;
         }
+
+        const now = new Date();
+        const day = now.getDay();
+        let schedule = [];
+        let scheduleType = '平日';
+
+        if (state.isHoliday) {
+            schedule = state.busSchedule[state.currentRoute].holiday || [];
+            scheduleType = '祝日';
+        } else if (state.isSunday) {
+            schedule = state.busSchedule[state.currentRoute].holiday || [];
+            scheduleType = '日曜';
+        } else if (day === 6) {
+            schedule = state.busSchedule[state.currentRoute].saturday || [];
+            scheduleType = '土曜';
+        } else {
+            schedule = state.busSchedule[state.currentRoute].weekday || [];
+            scheduleType = '平日';
+        }
+
+    if (!Array.isArray(schedule)) {
+        console.error("エラー: schedule が配列ではありません:", schedule);
+        updateStatus('not-running', '本日の運行はありません');
+        return;
+    }
+
+    if (schedule.length === 0) {
+        updateStatus('not-running', `本日の運行はありません`);
+        return;
+    }
+
+    // 時刻表のヘッダー
+    let tableHTML = `
+        <tr>
+            <th colspan="2">${state.currentRoute === 'orange' ? 'オレンジ' : 'グリーン'}コース（${scheduleType}）</th>
+        </tr>
+        <tr>
+            <th>出発時刻</th>
+            <th>状態</th>
+        </tr>
+    `;
+
+    for (const timeStr of schedule) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const busTimeValue = hours * 60 + minutes;
+
+        let status = '';
+        let rowClass = '';
+
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTimeValue = currentHour * 60 + currentMinute;
+
+        if (busTimeValue < currentTimeValue) {
+            status = '出発済み';
+        } else if (timeStr === state.nextBusDeparture) {
+            status = `あと${state.minutesToNextBus}分`;
+            rowClass = 'next';
+        } else {
+            const diff = busTimeValue - currentTimeValue;
+            status = `あと${diff}分`;
+        }
+
+        tableHTML += `
+            <tr class="${rowClass}">
+                <td>${timeStr}</td>
+                <td>${status}</td>
+            </tr>
+        `;
+    }
+
+    timetableEl.innerHTML = tableHTML;
+}
         
         // ページ読み込み時にアプリを初期化
         window.addEventListener('DOMContentLoaded', () => {
