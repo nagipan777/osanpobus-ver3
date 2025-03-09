@@ -426,7 +426,7 @@
 
         const response = await fetch(url, {
             method: "GET",
-            mode: "cors",  // 🚀 CORS対応
+            mode: 'no-cors',  // 🚀 CORS対応
             headers: {
                 "Content-Type": "application/json"
             }
