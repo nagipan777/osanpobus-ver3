@@ -420,48 +420,30 @@
        
         // スプレッドシートのデータを取得（GASのWeb APIを使用）
         async function fetchBusSchedule() {
-            try {
-                const url = 'https://script.google.com/macros/s/AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3/exec';
-                console.log("Fetching data from:", url);
+    try {
+        const url = 'https://script.google.com/macros/s/AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3/exec';
+        console.log("Fetching data from:", url);
 
-                const response = await fetch(url, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json"
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTPエラー: ${response.status}`);
-                }
-
-                const data = await response.json();
-                console.log("取得したデータ:", data);
-
-                // スプレッドシートのデータから時刻表を抽出
-                const orangeWeekday = extractTimeSchedule(data.sheets.Sheet1.rows, 'orange', 'weekday');
-                const orangeHoliday = extractTimeSchedule(data.sheets.Sheet1.rows, 'orange', 'holiday');
-                const greenWeekday = extractTimeSchedule(data.sheets.Sheet1.rows, 'green', 'weekday');
-                const greenHoliday = extractTimeSchedule(data.sheets.Sheet1.rows, 'green', 'holiday');
-
-                state.busSchedule = {
-                    orange: {
-                        weekday: orangeWeekday,
-                        holiday: orangeHoliday
-                    },
-                    green: {
-                        weekday: greenWeekday,
-                        holiday: greenHoliday
-                    }
-                };
-
-            } catch (error) {
-                console.error('スプレッドシートデータの読み込みに失敗しました:', error);
-                errorContainerEl.textContent = `エラー: スプレッドシートデータの取得に失敗しました`;
-                errorContainerEl.style.display = 'block';
-                loadingEl.style.display = 'none';
-                return null;
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
             }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTPエラー: ${response.status}`);
         }
+
+        const data = await response.json();
+        console.log("取得したデータ:", data);
+    } catch (error) {
+        console.error('スプレッドシートデータの読み込みに失敗しました:', error);
+        errorContainerEl.textContent = `エラー: スプレッドシートデータの取得に失敗しました`;
+        errorContainerEl.style.display = 'block';
+        loadingEl.style.display = 'none';
+        return null;
+    }
+}
         
         // スプレッドシートのデータから時刻表を抽出するヘルパー関数
         function extractTimeSchedule(rows, routeType, dayType) {
