@@ -423,20 +423,21 @@
     try {
         const url = GAS_WEB_APP_URL;
 
+        console.log("Fetching data from:", url);
+
         const response = await fetch(url, {
             method: "GET",
-            mode: "no-cors", // CORSエラーを防ぐ
             headers: {
                 "Content-Type": "application/json"
             }
         });
 
-        console.log("Response:", response);
+        if (!response.ok) {
+            throw new Error(`HTTPエラー: ${response.status}`);
+        }
 
-        // `no-cors` を使うと、レスポンスを JSON としてパースできないため一旦削除
-        // const data = await response.json(); // ここを削除
-        console.log("取得したデータ:", response); // これでレスポンスの確認
-
+        const data = await response.json();
+        console.log("取得したデータ:", data);
     } catch (error) {
         console.error('スプレッドシートデータの読み込みに失敗しました:', error);
         errorContainerEl.textContent = `エラー: スプレッドシートデータの取得に失敗しました`;
