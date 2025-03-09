@@ -476,7 +476,7 @@ fetchAllSheetsData();
             ];
 
             state.isSunday = today.getDay() === 0;  // 日曜日判定
-            state.isHoliday = holidays.includes(formattedDate);  // 祝日判定
+            state.isHoliday = holidays.includes(formattedDate) && !state.isSunday;  // 祝日判定（日曜日は除外）
         
             return { isHoliday: state.isHoliday, isSunday: state.isSunday };
         } catch (error) {
@@ -531,14 +531,12 @@ fetchAllSheetsData();
             let schedule;
             let scheduleType = '平日';
 
-            if (state.isHoliday) { 
-            updateStatus('not-running', '本日は祝日のため運休です');
-            return;
-            }
-
         if (state.isSunday) {
             schedule = state.busSchedule[state.currentRoute].holiday; // 日曜日専用スケジュール
             scheduleType = '日曜コース';
+        } else if (state.isHoliday) {
+            updateStatus('not-running', '本日は祝日のため運休です');
+            return;
         } else {
             schedule = state.busSchedule[state.currentRoute].weekday;
         }
@@ -599,7 +597,10 @@ fetchAllSheetsData();
             let schedule;
             let scheduleType;
             
-            if (state.isHoliday || day === 0) {
+            if (state.isSunday) {
+                schedule = state.busSchedule[state.currentRoute].holiday;
+                scheduleType = '休日';
+            } else if (state.isHoliday) {
                 schedule = state.busSchedule[state.currentRoute].holiday;
                 scheduleType = '休日';
             } else if (day === 6) {
