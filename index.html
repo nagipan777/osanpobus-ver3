@@ -557,8 +557,13 @@
         }
 
         if (!nextBusTime) {
-            updateStatus('day-ended', '本日の運行は終了しました');
-            return;
+            const now = new Date();
+            const currentHour = now.getHours();
+
+            if (currentHour < 24) {
+                updateStatus('day-ended', '本日の運行は終了しました');
+                return;
+            }
         }
 
         state.nextBusDeparture = nextBusTime;
@@ -574,6 +579,9 @@
             statusEl.className = `status ${statusClass}`;
             statusEl.textContent = statusText;
             nextBusEl.textContent = (statusClass === 'not-running') ? '本日は運休です' : (statusClass === 'day-ended') ? '本日の運行は終了しました' : nextBusEl.textContent;
+
+            // 時刻表を常に表示する
+            timetableContainerEl.style.display = 'block';
         }
 
         // 時刻表を表示
