@@ -236,10 +236,13 @@
         // 定数と設定
         const SPREADSHEET_ID = '13MQSno_jn1XYaPkmeeuwZzRsa62I9pVeiPXjS7AKC5I';
         const SHEET_NAME = 'Sheet1';
-        const SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}`;
         
-        const WEATHER_API_KEY = 'aedbab52747a52984fdcedcb196bc105'; // 実際のAPIキーに置き換えてください
-        const WEATHER_CITY_ID = '1851604'; // 蟹江町の都市ID (OpenWeatherMapの場合)
+        // Google Apps Script Webアプリケーションのデプロイ先URL（CORS対応のため）
+        // 注: 実際の使用前にデプロイする必要があります
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+        
+        const WEATHER_API_KEY = 'aedbab52747a52984fdcedcb196bc105';
+        const WEATHER_CITY_ID = '1851604'; // 蟹江町の都市ID
         
         // DOM要素の参照を保持
         const currentTimeEl = document.getElementById('current-time');
@@ -280,7 +283,7 @@
             // 初回データ取得
             await refreshData();
             
-            // 60秒ごとに情報を自動更新（APIコール多発防止のため）
+            // 60秒ごとに情報を自動更新
             setInterval(updateNextBusInfo, 60000);
         }
         
@@ -350,52 +353,132 @@
             }
         }
         
-        // スプレッドシートからデータを取得
+        // スプレッドシートからデータを取得 - CORS対応版
         async function fetchBusSchedule() {
             try {
-                // モックデータを使用（実際の実装では、Google SheetsのCSV出力を使用する）
-                // 注: 本番では、CORSポリシー回避のためにプロキシサーバーが必要な場合があります
+                // --- 解決策1: JSONP形式でデータを取得 ---
+                const jsonpUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
                 
-                // 実際の実装例:
-                const response = await fetch(SPREADSHEET_URL);
-                if (!response.ok) throw new Error('時刻表データの取得に失敗しました');
-                const csvData = await response.text();
-                state.busSchedule = parseCSV(csvData);
+                return new Promise((resolve, reject) => {
+                    // JSONP用のスクリプトタグを作成
+                    const script = document.createElement('script');
+                    
+                    // 一時的なコールバック関数名を生成
+                    const callbackName = 'jsonpCallback_' + Math.round(Math.random() * 1000000);
+                    
+                    // グローバルにコールバック関数を定義
+                    window[callbackName] = function(response) {
+                        try {
+                            // Google Sheetsの応答を処理
+                            if (response.status === 'error') {
+                                reject(new Error(response.errors[0].message));
+                                return;
+                            }
+                            
+                            // データの解析
+                            const rawData = response.table.rows;
+                            
+                            // データの構造化 (rawDataの構造に合わせて調整が必要)
+                            const scheduleData = {
+                                orange: {
+                                    weekday: extractTimeSchedule(rawData, 'orange', 'weekday'),
+                                    saturday: extractTimeSchedule(rawData, 'orange', 'saturday'),
+                                    holiday: extractTimeSchedule(rawData, 'orange', 'holiday')
+                                },
+                                green: {
+                                    weekday: extractTimeSchedule(rawData, 'green', 'weekday'),
+                                    saturday: extractTimeSchedule(rawData, 'green', 'saturday'),
+                                    holiday: extractTimeSchedule(rawData, 'green', 'holiday')
+                                }
+                            };
+                            
+                            state.busSchedule = scheduleData;
+                            resolve(scheduleData);
+                        } catch (e) {
+                            reject(e);
+                        } finally {
+                            // クリーンアップ：スクリプトタグとグローバルコールバックを削除
+                            document.body.removeChild(script);
+                            delete window[callbackName];
+                        }
+                    };
+                    
+                    // スクリプトソースURLにコールバック名を追加
+                    script.src = `${jsonpUrl}&tqrt=tqcallback&tqc=${callbackName}`;
+                    script.onerror = () => reject(new Error('スプレッドシートデータの読み込みに失敗しました'));
+                    
+                    // DOMにスクリプトを追加して実行
+                    document.body.appendChild(script);
+                });
                 
-                // // モックデータ（デモ用）
-                // const mockData = {
-                //     orange: {
-                //         weekday: ['7:00', '8:30', '10:00', '11:30', '13:00', '14:30', '16:00', '17:30'],
-                //         saturday: ['7:00', '8:30', '10:00', '11:30', '13:00', '14:30', '16:00', '17:30'],
-                //         holiday: ['9:00', '11:00', '13:00', '15:00', '17:00']
-                //     },
-                //     green: {
-                //         weekday: ['7:15', '8:45', '10:15', '11:45', '13:15', '14:45', '16:15', '17:45'],
-                //         saturday: ['7:15', '8:45', '10:15', '11:45', '13:15', '14:45', '16:15', '17:45'],
-                //         holiday: ['9:30', '11:30', '13:30', '15:30', '17:30']
-                //     }
-                };
-                
-                state.busSchedule = mockData;
-                return mockData;
+                // --- データ取得に失敗した場合のフォールバックとしてモックデータを使用 ---
             } catch (error) {
                 console.error('バススケジュールの取得に失敗しました:', error);
-                throw new Error('時刻表データの取得に失敗しました');
+                
+                // フォールバック：モックデータを使用
+                const mockData = {
+                    orange: {
+                        weekday: ['7:00', '8:30', '10:00', '11:30', '13:00', '14:30', '16:00', '17:30'],
+                        saturday: ['7:00', '8:30', '10:00', '11:30', '13:00', '14:30', '16:00', '17:30'],
+                        holiday: ['9:00', '11:00', '13:00', '15:00', '17:00']
+                    },
+                    green: {
+                        weekday: ['7:15', '8:45', '10:15', '11:45', '13:15', '14:45', '16:15', '17:45'],
+                        saturday: ['7:15', '8:45', '10:15', '11:45', '13:15', '14:45', '16:15', '17:45'],
+                        holiday: ['9:30', '11:30', '13:30', '15:30', '17:30']
+                    }
+                };
+                
+                console.log('モックデータを使用します');
+                state.busSchedule = mockData;
+                return mockData;
+            }
+        }
+        
+        // スプレッドシートのデータから時刻表を抽出するヘルパー関数
+        function extractTimeSchedule(rows, routeType, dayType) {
+            // rows, routeType, dayTypeに基づいてデータを抽出
+            // この関数は実際のスプレッドシートの構造に合わせて調整する必要があります
+            
+            // 仮実装（実際のデータ構造に合わせて変更）
+            const timeArray = [];
+            
+            try {
+                for (const row of rows) {
+                    // 行のデータを確認し、条件に一致する時間を抽出
+                    const cellData = row.c;
+                    if (cellData && cellData.length >= 3) {
+                        // 例: 1列目がルートタイプ、2列目が曜日タイプ、3列目が時刻
+                        const rowRouteType = cellData[0]?.v;
+                        const rowDayType = cellData[1]?.v;
+                        const time = cellData[2]?.v;
+                        
+                        if (rowRouteType === routeType && rowDayType === dayType && time) {
+                            timeArray.push(time);
+                        }
+                    }
+                }
+                return timeArray.sort();
+            } catch (e) {
+                console.error('時刻表データの抽出中にエラーが発生しました:', e);
+                return [];
             }
         }
         
         // 祝日かどうかを確認
         async function checkIfHoliday() {
             try {
-                // 実際の実装では、祝日APIを使用するか、祝日リストを使用
-                // モックデータ（デモ用）- 今日が祝日かどうかをランダムに決定
-                state.isHoliday = false; // 本番では実際の判定に置き換え
+                const today = new Date();
+                const formattedDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
                 
-                // 例：特定の日付を祝日リストと比較する実装
-                // const today = new Date();
-                // const formattedDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
-                // const holidayList = ['2025-01-01', '2025-01-13', ...]; // 実際の祝日リスト
-                // state.isHoliday = holidayList.includes(formattedDate);
+                // 日本の祝日APIを使用 (例: 祝日APIサービスのエンドポイント)
+                // 注: 実際の実装では適切な祝日APIを使用してください
+                // const response = await fetch(`https://holidays-jp.github.io/api/v1/${today.getFullYear()}/date.json`);
+                // const holidayData = await response.json();
+                // state.isHoliday = holidayData[formattedDate] !== undefined;
+                
+                // 簡易実装：日曜日を祝日扱いにする
+                state.isHoliday = today.getDay() === 0; // 日曜日の場合はtrue
                 
                 return state.isHoliday;
             } catch (error) {
@@ -409,21 +492,28 @@
         // 気象条件を確認
         async function checkWeatherConditions() {
             try {
-                // 実際の実装では、気象APIを使用
-                // 例: OpenWeatherMap APIを使用する場合
-                // const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?id=${WEATHER_CITY_ID}&appid=${WEATHER_API_KEY}&units=metric&lang=ja`);
-                // const data = await response.json();
-                // const weatherId = data.weather[0].id;
-                // 豪雨（大雨）、豪雪（大雪）、台風などの警報条件をチェック
-                // state.isSuspendedDueToWeather = weatherId >= 200 && weatherId < 300 || weatherId >= 600 && weatherId < 700 && data.main.temp < 0;
+                // OpenWeatherMap APIを使用
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?id=${WEATHER_CITY_ID}&appid=${WEATHER_API_KEY}&units=metric&lang=ja`);
                 
-                // モックデータ（デモ用）
-                state.isSuspendedDueToWeather = false; // 本番では実際の判定に置き換え
+                if (!response.ok) {
+                    throw new Error('気象データの取得に失敗しました');
+                }
+                
+                const data = await response.json();
+                const weatherId = data.weather[0].id;
+                
+                // 豪雨（大雨）、豪雪（大雪）、台風などの警報条件をチェック
+                // weatherIdの範囲に基づいて運休判断（要調整）
+                state.isSuspendedDueToWeather = 
+                    (weatherId >= 200 && weatherId < 300) || // 雷雨
+                    (weatherId >= 500 && weatherId < 600 && data.rain && data.rain['1h'] > 20) || // 大雨 (1時間に20mm以上)
+                    (weatherId >= 600 && weatherId < 700 && data.snow && data.snow['1h'] > 10) || // 大雪 (1時間に10cm以上)
+                    (weatherId >= 781 && weatherId < 782); // 竜巻
                 
                 return state.isSuspendedDueToWeather;
             } catch (error) {
                 console.error('気象条件確認中にエラーが発生しました:', error);
-                // エラーがあっても処理を続行（運行中と仮定）
+                // エラーがあっても処理を続行
                 state.isSuspendedDueToWeather = false;
                 return false;
             }
@@ -450,7 +540,7 @@
             }
             
             // 運休かどうか判定
-            if (state.isHoliday && !schedule) {
+            if (state.isHoliday && (!schedule || schedule.length === 0)) {
                 updateStatus('not-running', '本日は祝日のため運休です');
                 return;
             }
@@ -460,8 +550,13 @@
                 return;
             }
             
-            if (day === 0 && !schedule) { // 日曜日で運行がない場合
+            if (day === 0 && (!schedule || schedule.length === 0)) { // 日曜日で運行がない場合
                 updateStatus('not-running', '日曜日は運休です');
+                return;
+            }
+            
+            if (!schedule || schedule.length === 0) {
+                updateStatus('not-running', '本日の運行予定はありません');
                 return;
             }
             
@@ -491,7 +586,7 @@
             state.nextBusDeparture = nextBusTime;
             state.minutesToNextBus = minutesToNext;
             
-            updateStatus('running', '本日は運行してます');
+            updateStatus('running', '本日は運行しています');
             nextBusEl.textContent = `次のバスは ${nextBusTime} （あと${minutesToNext}分）`;
         }
         
@@ -531,7 +626,7 @@
                 scheduleType = '平日';
             }
             
-            if (!schedule) {
+            if (!schedule || schedule.length === 0) {
                 timetableEl.innerHTML = '<tr><td>本日の運行はありません</td></tr>';
                 return;
             }
