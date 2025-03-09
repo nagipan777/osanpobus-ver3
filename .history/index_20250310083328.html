@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蟹江町お散歩バス</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 24px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 16px;
+        }
+        .time-display {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .day-display {
+            text-align: center;
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        .next-bus {
+            font-size: 24px;
+            text-align: center;
+            margin: 24px 0;
+            padding: 16px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .status {
+            text-align: center;
+            font-size: 20px;
+            margin: 16px 0;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .running {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .not-running {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .day-ended {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        .route-selector {
+            display: flex;
+            justify-content: center;
+            margin: 16px 0;
+        }
+        .route-btn {
+            padding: 10px 20px;
+            margin: 0 8px;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .route-orange {
+            background-color: #FF9800;
+            color: white;
+        }
+        .route-green {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .route-purple {
+            background-color: #b39ddb;
+            color: white;
+            color: white;
+        }
+        .route-btn.active {
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
+            font-weight: bold;
+        }
+        .refresh-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .refresh-btn:hover {
+            background-color: #2980b9;
+        }
+        .refresh-btn:active {
+            background-color: #1f6aa5;
+        }
+        .timetable {
+            width: 100%;
+            margin-top: 24px;
+            border-collapse: collapse;
+        }
+        .timetable th, .timetable td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .timetable th {
+            background-color: #f2f2f2;
+        }
+        .timetable .next {
+            background-color: #fff9c4;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+        .error-message {
+            color: #721c24;
+            background-color: #f8d7da;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 16px 0;
+            text-align: center;
+        }
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #121212;
+                color: #e0e0e0;
+            }
+            .card {
+                background-color: #1e1e1e;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            }
+            .header h1 {
+                color: #e0e0e0;
+            }
+            .next-bus {
+                background-color: #2a2a2a;
+            }
+            .day-display {
+                color: #aaa;
+            }
+            .running {
+                background-color: #1e3a2b;
+                color: #75b798;
+            }
+            .not-running {
+                background-color: #3b1e25;
+                color: #ea868f;
+            }
+            .day-ended {
+                background-color: #1a3b5c;
+                color: #9ec5fe;
+            }
+            .timetable th {
+                background-color: #2a2a2a;
+            }
+            .timetable td {
+                border-color: #444;
+            }
+            .timetable .next {
+                background-color: #3d3c17;
+            }
+            .error-message {
+                background-color: #3b1e25;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>蟹江町お散歩バス</h1>
+    </div>
+
+    <div class="card">
+        <div class="time-display" id="current-time">--:--</div>
+        <div class="day-display" id="current-day">-曜日</div>
+        
+        <div class="route-selector">
+            <button class="route-btn route-orange active" id="orange-route">オレンジコース</button>
+            <button class="route-btn route-green" id="green-route">グリーンコース</button>
+            <button class="route-btn route-purple" id="purple-route" style="display: none;">日曜コース</button>
+        </div>
+        
+        <div id="status-container">
+            <div class="status" id="status-display">読み込み中...</div>
+            <div class="next-bus" id="next-bus-display">次のバスを確認中...</div>
+        </div>
+
+        <div id="error-container" style="display: none;" class="error-message"></div>
+        
+        <div id="loading" class="loading">時刻表データを読み込み中...</div>
+        
+        <button class="refresh-btn" id="refresh-btn">情報を更新する</button>
+    </div>
+    
+    <div class="card" id="timetable-container" style="display: none;">
+        <h2>本日の時刻表</h2>
+        <table class="timetable" id="timetable">
+            <!-- 時刻表がここに動的に挿入されます -->
+        </table>
+    </div>
+
+    <div class="footer">
+        <p>※祝日・荒天時は運休する場合があります</p>
+        <p>© 蟹江町お散歩バスアプリ</p>
+    </div>
+
+    <script>
+        // 定数と設定
+        const SPREADSHEET_ID = 'AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3';
+        const SHEET_NAME = 'Sheet1';
+        
+        // Google Apps Script Webアプリケーションのデプロイ先URL（CORS対応のため）
+        // 注: 実際の使用前にデプロイする必要があります
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3/exec';
+        
+        const WEATHER_API_KEY = 'aedbab52747a52984fdcedcb196bc105';
+        const WEATHER_CITY_ID = '1851604'; // 蟹江町の都市ID
+        
+        // DOM要素の参照を保持
+        const currentTimeEl = document.getElementById('current-time');
+        const currentDayEl = document.getElementById('current-day');
+        const nextBusEl = document.getElementById('next-bus-display');
+        const statusEl = document.getElementById('status-display');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const loadingEl = document.getElementById('loading');
+        const timetableContainerEl = document.getElementById('timetable-container');
+        const timetableEl = document.getElementById('timetable');
+        const errorContainerEl = document.getElementById('error-container');
+        const orangeRouteBtn = document.getElementById('orange-route');
+        const greenRouteBtn = document.getElementById('green-route');
+        const purpleRouteBtn = document.getElementById('purple-route');
+        
+        // アプリケーションの状態
+        let state = {
+            currentRoute: 'orange', // 'orange' または 'green'
+            isSundayCourse: false,
+            isHoliday: false,
+            isSuspendedDueToWeather: false,
+            busSchedule: null,
+            nextBusDeparture: null,
+            minutesToNextBus: null,
+            operatingStatus: 'unknown' // 'running', 'not-running', 'day-ended'
+        };
+        
+        // 初期化関数
+        async function initApp() {
+    try {
+        console.log("initApp() 開始");
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 1000);
+
+        // ルートボタンのイベントリスナー
+        orangeRouteBtn.addEventListener('click', () => setRoute('orange'));
+        greenRouteBtn.addEventListener('click', () => setRoute('green'));
+
+        // 更新ボタンのイベントリスナー
+        refreshBtn.addEventListener('click', refreshData);
+
+        console.log("初回データ取得開始");
+        await refreshData();
+        console.log("初回データ取得完了");
+
+        // 60秒ごとに情報を自動更新
+        setInterval(updateNextBusInfo, 60000);
+
+        // 毎日0時0分にデータを更新
+        setInterval(refreshDataAtMidnight, 86400000); // 24時間ごとに実行 (ミリ秒)
+
+        console.log("initApp() 完了");
+    } catch (error) {
+        console.error("アプリ初期化中にエラーが発生しました:", error);
+        errorContainerEl.textContent = `エラー: アプリの初期化に失敗しました`;
+        errorContainerEl.style.display = 'block';
+    }
+}
+
+        // 0時0分にデータを更新する関数
+        function refreshDataAtMidnight() {
+            const now = new Date();
+            const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0); // 次の日の0時0分
+            const timeUntilMidnight = midnight.getTime() - now.getTime();
+
+            setTimeout(() => {
+                console.log("0時になりました。データを更新します。");
+                refreshData();
+                // 以降も毎日0時に更新するために、再度設定
+                setInterval(refreshDataAtMidnight, 86400000);
+            }, timeUntilMidnight);
+        }
+
+        // 現在時刻と曜日の更新
+        function updateCurrentTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const dayIndex = now.getDay();
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            
+            currentTimeEl.textContent = `${hours}:${minutes}`;
+            currentDayEl.textContent = `（${days[dayIndex]}曜日）`;
+            
+            // 現在時刻が変わったので、次のバス情報も更新
+            if (state.busSchedule) {
+                updateNextBusInfo();
+            }
+        }
+        
+        // ルート切り替え
+        function setRoute(route) {
+            state.currentRoute = route;
+            
+            // ボタンのアクティブ状態を更新
+            if (route === 'orange') {
+                orangeRouteBtn.classList.add('active');
+                greenRouteBtn.classList.remove('active');
+            } else {
+                orangeRouteBtn.classList.remove('active');
+                greenRouteBtn.classList.add('active');
+            }
+            
+            // 次のバス情報を更新
+            updateNextBusInfo();
+            updateTimetableDisplay();
+        }
+        
+        // データの更新
+        async function refreshData() {
+            try {
+                errorContainerEl.style.display = 'none';
+                loadingEl.style.display = 'block';
+                
+                //  1. CSVデータを処理
+                //await fetchCSVData();
+                await processCSVData();
+                
+                // 2. 祝日かどうかを確認
+                await checkIfHoliday();
+                
+                // 3. 気象状況を確認（天候による運休判断）
+                await checkWeatherConditions();
+                
+                // 4. 次のバス情報を更新
+                updateNextBusInfo();
+                
+                // 5. 時刻表を表示
+                updateTimetableDisplay();
+                
+                
+
+                loadingEl.style.display = 'none';
+                timetableContainerEl.style.display = 'block';
+            } catch (error) {
+                console.error('データ更新中にエラーが発生しました:', error);
+                errorContainerEl.textContent = `エラー: ${error.message}`;
+                errorContainerEl.style.display = 'block';
+                loadingEl.style.display = 'none';
+            }
+        }
+
+//         async function fetchAllSheetsData() {
+//     try {
+//         const url = GAS_WEB_APP_URL; // 最新のGAS URL
+
+//         console.log("Fetching data from:", url);
+
+//         const response = await fetch(url, {
+//             method: "GET",
+//             headers: {
+//                 "Content-Type": "application/json"
+//             }
+//         });
+
+//         console.log("Response:", response);
+
+//         if (!response.ok) {
+//             throw new Error(`HTTPエラー: ${response.status}`);
+//         }
+
+//         const data = await response.json();
+//         console.log("取得したデータ:", data);
+
+//     } catch (error) {
+//         console.error("スプレッドシートデータの取得に失敗しました:", error);
+//     }
+// }
+
+// // 実行
+// fetchAllSheetsData();
+       
+//         // スプレッドシートのデータを取得（GASのWeb APIを使用）
+//         async function fetchBusSchedule() {
+//             try {
+//                 const url = 'https://script.google.com/macros/s/AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3/exec';
+//                 console.log("Fetching data from:", url);
+
+//                 const response = await fetch(url, {
+//                     method: "GET",
+//                     headers: {
+//                         "Content-Type": "application/json"
+//                     }
+//                 });
+//                 if (!response.ok) {
+//                     throw new Error(`HTTPエラー: ${response.status}`);
+//                 }
+
+//                 const data = await response.json();
+//                 console.log("取得したデータ:", data);
+
+//                 // スプレッドシートのデータから時刻表を抽出
+//                 const orangeWeekday = extractTimeSchedule(data.sheets.Sheet1.rows, 'orange', 'weekday');
+//                 const orangeHoliday = extractTimeSchedule(data.sheets.Sheet1.rows, 'orange', 'holiday');
+//                 const greenWeekday = extractTimeSchedule(data.sheets.Sheet1.rows, 'green', 'weekday');
+//                 const greenHoliday = extractTimeSchedule(data.sheets.Sheet1.rows, 'green', 'holiday');
+
+//                 state.busSchedule = {
+//                     orange: {
+//                         weekday: orangeWeekday,
+//                         holiday: orangeHoliday
+//                     },
+//                     green: {
+//                         weekday: greenWeekday,
+//                         holiday: greenHoliday
+//                     }
+//                 };
+
+//             } catch (error) {
+//                 console.error('スプレッドシートデータの読み込みに失敗しました:', error);
+//                 errorContainerEl.textContent = `エラー: スプレッドシートデータの取得に失敗しました`;
+//                 errorContainerEl.style.display = 'block';
+//                 loadingEl.style.display = 'none';
+//                 return null;
+//             }
+//         }
+async function fetchCSVData() {
+    try {
+        const url = 'https://script.google.com/macros/s/AKfycbxnc9tF2oKTkKbJS_UIOPSKOfHXdwMySBepfkQcy9vEXggqoBo3LwmNFerlZfWmpsaR0g/exec';
+        console.log("Fetching CSV data from:", url);
+
+        const response = await fetch(url, {
+            method: "GET",
+            mode: "cors",  // 🚀 CORSエラー回避
+            headers: {
+                "Content-Type": "text/csv"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTPエラー: ${response.status}`);
+        }
+
+        const csvText = await response.text();
+        console.log("取得したCSVデータ:", csvText);
+
+        // CSVを配列に変換
+        const csvArray = csvText.split("\n").map(row => row.split(","));
+        console.log("変換後のデータ:", csvArray);
+
+        return csvArray;
+    } catch (error) {
+        console.error("CSVデータの取得に失敗しました:", error);
+    }
+}
+// スプレッドシートデータ取得の代わりにCSV
+    async function processCSVData() {
+    const csvArray = await fetchCSVData();
+    if (!csvArray) return;
+
+    let jsonData = {};
+    let currentSheet = "";
+    
+    csvArray.forEach(row => {
+        if (row.length === 1 && row[0].startsWith("---")) {
+            // シート名の部分
+            currentSheet = row[0].replace(/---|---/g, "").trim();
+            jsonData[currentSheet] = [];
+        } else if (currentSheet && row.length > 1) {
+            jsonData[currentSheet].push(row);
+        }
+    });
+
+    console.log("JSON データ:", jsonData);
+    return jsonData;
+}
+        
+        // スプレッドシートのデータから時刻表を抽出するヘルパー関数
+        function extractTimeSchedule(rows, routeType, dayType) {
+            // rows, routeType, dayTypeに基づいてデータを抽出
+            // この関数は実際のスプレッドシートの構造に合わせて調整する必要があります
+            
+            // 仮実装（実際のデータ構造に合わせて変更）
+            const timeArray = [];
+            
+            try {
+                for (const row of rows) {
+                    // 行のデータを確認し、条件に一致する時間を抽出
+                    const cellData = row.c;
+                    if (cellData && cellData.length >= 3) {
+                        // 例: 1列目がルートタイプ、2列目が曜日タイプ、3列目が時刻
+                        const rowRouteType = cellData[0]?.v;
+                        const rowDayType = cellData[1]?.v;
+                        const time = cellData[2]?.v;
+                        
+                        if (rowRouteType === routeType && rowDayType === dayType && time) {
+                            timeArray.push(time);
+                        }
+                    }
+                }
+                return timeArray.sort();
+            } catch (e) {
+                console.error('時刻表データの抽出中にエラーが発生しました:', e);
+                return [];
+            }
+        }
+        
+        // 祝日かどうかを確認
+        // 祝日かどうかを確認（日曜日は祝日扱いせず区別する）
+        async function checkIfHoliday() {
+        try {
+            const today = new Date();
+            const formattedDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+        
+            // 簡易実装：祝日APIの代わりに手動で日付リストを管理
+            const holidays = [
+                "2025-01-01", "2025-02-11", "2025-03-21", "2025-04-29",
+                "2025-05-03", "2025-05-05", "2025-07-15", "2025-08-11", "2025-09-16", "2025-09-23", "2025-10-14",
+                "2025-11-03", "2025-11-23", "2025-12-23"
+            ];
+
+            state.isSunday = today.getDay() === 0;  // 日曜日判定
+            state.isHoliday = holidays.includes(formattedDate) && !state.isSunday;  // 祝日判定（日曜日は除外）
+        
+            return { isHoliday: state.isHoliday, isSunday: state.isSunday };
+        } catch (error) {
+            console.error('祝日確認中にエラーが発生しました:', error);
+            state.isHoliday = false;
+            state.isSunday = false;
+            return { isHoliday: false, isSunday: false };
+        }
+    }
+        
+        // 気象条件を確認
+        async function checkWeatherConditions() {
+            try {
+                // OpenWeatherMap APIを使用
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?id=${WEATHER_CITY_ID}&appid=${WEATHER_API_KEY}&units=metric&lang=ja`);
+                
+                if (!response.ok) {
+                    throw new Error('気象データの取得に失敗しました');
+                }
+                
+                const data = await response.json();
+                const weatherId = data.weather[0].id;
+                
+                // 豪雨（大雨）、豪雪（大雪）、台風などの警報条件をチェック
+                // weatherIdの範囲に基づいて運休判断（要調整）
+                state.isSuspendedDueToWeather = 
+                    (weatherId >= 200 && weatherId < 300) || // 雷雨
+                    (weatherId >= 500 && weatherId < 600 && data.rain && data.rain['1h'] > 20) || // 大雨 (1時間に20mm以上)
+                    (weatherId >= 600 && weatherId < 700 && data.snow && data.snow['1h'] > 10) || // 大雪 (1時間に10cm以上)
+                    (weatherId >= 781 && weatherId < 782); // 竜巻
+                
+                return state.isSuspendedDueToWeather;
+            } catch (error) {
+                console.error('気象条件確認中にエラーが発生しました:', error);
+                // エラーがあっても処理を続行
+                state.isSuspendedDueToWeather = false;
+                return false;
+            }
+        }
+        
+            // 次のバス発車時刻を計算
+        function updateNextBusInfo() {
+            if (!state.busSchedule) return;
+
+            const now = new Date();
+            const day = now.getDay(); // 0:日, 1:月, ... 6:土
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const currentTimeValue = currentHour * 60 + currentMinute; // 分単位での現在時刻
+
+            // 運行スケジュールの選択（平日、土曜、日曜・祝日）
+            let schedule;
+            let scheduleType = '平日';
+
+        if (state.isSunday) {
+            schedule = state.busSchedule[state.currentRoute].holiday; // 日曜日専用スケジュール
+            scheduleType = '日曜コース';
+        } else if (state.isHoliday) {
+            updateStatus('not-running', '本日は祝日のため運休です');
+            return;
+        } else {
+            schedule = state.busSchedule[state.currentRoute].weekday;
+        }
+
+        if (!schedule || schedule.length === 0) {
+            updateStatus('not-running', `本日の運行はありません`);
+            return;
+        }
+
+        let nextBusTime = null;
+        let minutesToNext = Infinity;
+
+        for (const timeStr of schedule) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const busTimeValue = hours * 60 + minutes; // 分単位でのバス時刻
+            const diff = busTimeValue - currentTimeValue;
+
+            if (diff > 0 && diff < minutesToNext) {
+                minutesToNext = diff;
+                nextBusTime = timeStr;
+            }
+        }
+
+        if (!nextBusTime) {
+            const now = new Date();
+            const currentHour = now.getHours();
+
+            if (currentHour < 24) {
+                updateStatus('day-ended', '本日の運行は終了しました');
+                return;
+            }
+        }
+
+        state.nextBusDeparture = nextBusTime;
+        state.minutesToNextBus = minutesToNext;
+
+        updateStatus('running', `本日は${scheduleType}で運行しています`);
+        nextBusEl.textContent = `次のバスは ${nextBusTime} （あと${minutesToNext}分）`;
+    }
+        
+        // 運行状況表示を更新
+        function updateStatus(statusClass, statusText) {
+            state.operatingStatus = statusClass;
+            statusEl.className = `status ${statusClass}`;
+            statusEl.textContent = statusText;
+            nextBusEl.textContent = (statusClass === 'not-running') ? '本日は運休です' : (statusClass === 'day-ended') ? '本日の運行は終了しました' : nextBusEl.textContent;
+
+            // 時刻表を常に表示する
+            timetableContainerEl.style.display = 'block';
+        }
+
+        // 時刻表を表示
+        function updateTimetableDisplay() {
+            if (!state.busSchedule || !state.busSchedule[state.currentRoute]) {
+                console.error("エラー: 選択されたルートの時刻表データが見つかりません");
+                updateStatus('not-running', '本日の運行はありません');
+                return;
+            }
+
+            const now = new Date();
+            const day = now.getDay();
+            let schedule = [];
+            let scheduleType = '平日';
+
+            if (state.isHoliday) {
+                schedule = state.busSchedule[state.currentRoute].holiday || [];
+                scheduleType = '祝日';
+            } else if (state.isSunday) {
+                schedule = state.busSchedule[state.currentRoute].holiday || [];
+                scheduleType = '日曜';
+            } else if (day === 6) {
+                schedule = state.busSchedule[state.currentRoute].saturday || [];
+                scheduleType = '土曜';
+            } else {
+                schedule = state.busSchedule[state.currentRoute].weekday || [];
+                scheduleType = '平日';
+            }
+
+            if (!Array.isArray(schedule)) {
+                console.error("エラー: schedule が配列ではありません:", schedule);
+                updateStatus('not-running', '本日の運行はありません');
+                return;
+            }
+
+            if (schedule.length === 0) {
+                updateStatus('not-running', `本日の運行はありません`);
+                return;
+            }
+
+            // 時刻表のヘッダー
+            let tableHTML = `
+                <tr>
+                    <th colspan="2">${state.currentRoute === 'orange' ? 'オレンジ' : 'グリーン'}コース（${scheduleType}）</th>
+                </tr>
+                <tr>
+                    <th>出発時刻</th>
+                    <th>状態</th>
+                </tr>
+            `;
+
+            // 時刻表の内容を構築する前に、schedule が空でないことを確認
+            if (schedule && schedule.length > 0) {
+                for (const timeStr of schedule) {
+                    const [hours, minutes] = timeStr.split(':').map(Number);
+                    const busTimeValue = hours * 60 + minutes;
+
+                    let status = '';
+                    let rowClass = '';
+
+                    const currentHour = now.getHours();
+                    const currentMinute = now.getMinutes();
+                    const currentTimeValue = currentHour * 60 + currentMinute;
+
+                    if (busTimeValue < currentTimeValue) {
+                        status = '出発済み';
+                    } else if (timeStr === state.nextBusDeparture) {
+                        status = `あと${state.minutesToNextBus}分`;
+                        rowClass = 'next';
+                    } else {
+                        const diff = busTimeValue - currentTimeValue;
+                        status = `あと${diff}分`;
+                    }
+
+                    tableHTML += `
+                        <tr class="${rowClass}">
+                            <td>${timeStr}</td>
+                            <td>${status}</td>
+                        </tr>
+                    `;
+                }
+            } else {
+                tableHTML += `<tr><td colspan="2">本日の運行はありません</td></tr>`;
+            }
+
+            timetableEl.innerHTML = tableHTML;
+        }
+        
+        // ページ読み込み時にアプリを初期化
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+
+            // 初期表示設定
+            updateRouteButtonVisibility();
+
+            // 紫ボタンがクリックされたときの処理
+            purpleRouteBtn.addEventListener('click', () => {
+                setRoute('purple');
+            });
+        });
+
+        function updateRouteButtonVisibility() {
+            const now = new Date();
+            const dayIndex = now.getDay();
+            const isNotRunning = state.operatingStatus === 'not-running' || state.operatingStatus === 'day-ended';
+
+            orangeRouteBtn.style.display = 'none';
+            greenRouteBtn.style.display = 'none';
+            purpleRouteBtn.style.display = 'none';
+
+            if (isNotRunning) {
+                orangeRouteBtn.style.display = 'none';
+                greenRouteBtn.style.display = 'none';
+                purpleRouteBtn.style.display = 'none';
+            } else if (dayIndex === 0) { // 日曜日
+                purpleRouteBtn.style.display = 'inline-block';
+                orangeRouteBtn.style.display = 'none';
+                greenRouteBtn.style.display = 'none';
+            } else { // 平日
+                orangeRouteBtn.style.display = 'inline-block';
+                greenRouteBtn.style.display = 'inline-block';
+                purpleRouteBtn.style.display = 'none';
+            }
+        }
+
+         // ルート切り替え関数を修正
+        function setRoute(route) {
+            state.currentRoute = route;
+            state.isSundayCourse = route === 'purple';
+
+            updateRouteButtonVisibility();
+            // 次のバス情報を更新
+            updateNextBusInfo();
+            updateTimetableDisplay();
+        }
+
+    </script>
+</body>
+</html>
