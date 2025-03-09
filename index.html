@@ -362,8 +362,32 @@
         }
         
         // スプレッドシートからデータを取得 - CORS対応版
+        async function fetchAllSheetsData() {
+    const url = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec'; // GASのURLに変更
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTPエラー: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("取得した全シートのデータ:", data);
+        
+        // 各シートのデータを取得する方法
+        console.log("Sheet1 のデータ:", data["Sheet1"]);
+        console.log("Sheet2 のデータ:", data["Sheet2"]);
+
+    } catch (error) {
+        console.error("スプレッドシートデータの取得に失敗しました:", error);
+    }
+}
+
+// 関数を実行
+fetchAllSheetsData();
+        
         // スプレッドシートのデータを取得（GASのWeb APIを使用）
-async function fetchBusSchedule() {
+        async function fetchBusSchedule() {
     try {
         // Google Apps Script (GAS) のデプロイURL
         const url = 'https://script.google.com/macros/s/AKfycbx72ntNDsz2upKWKHcyGoXywot-rBoka01Dlhqe3FBfIKveBl_mtb1ZO3CBeUsrrm0Ugw/exec'; // ← 実際のURLに変更
