@@ -270,23 +270,31 @@
         
         // 初期化関数
         async function initApp() {
-            updateCurrentTime();
-            setInterval(updateCurrentTime, 1000);
-            
-            // ルートボタンのイベントリスナー
-            orangeRouteBtn.addEventListener('click', () => setRoute('orange'));
-            greenRouteBtn.addEventListener('click', () => setRoute('green'));
-            
-            // 更新ボタンのイベントリスナー
-            refreshBtn.addEventListener('click', refreshData);
-            
-            // 初回データ取得
-            await refreshData();
-            
-            // 60秒ごとに情報を自動更新
-            setInterval(updateNextBusInfo, 60000);
-        }
-        
+    try {
+        console.log("initApp() 開始");
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 1000);
+
+        // ルートボタンのイベントリスナー
+        orangeRouteBtn.addEventListener('click', () => setRoute('orange'));
+        greenRouteBtn.addEventListener('click', () => setRoute('green'));
+
+        // 更新ボタンのイベントリスナー
+        refreshBtn.addEventListener('click', refreshData);
+
+        console.log("初回データ取得開始");
+        await refreshData();
+        console.log("初回データ取得完了");
+
+        // 60秒ごとに情報を自動更新
+        setInterval(updateNextBusInfo, 60000);
+        console.log("initApp() 完了");
+    } catch (error) {
+        console.error("アプリ初期化中にエラーが発生しました:", error);
+        errorContainerEl.textContent = `エラー: アプリの初期化に失敗しました`;
+        errorContainerEl.style.display = 'block';
+    }
+}
         // 現在時刻と曜日の更新
         function updateCurrentTime() {
             const now = new Date();
