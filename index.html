@@ -396,13 +396,13 @@ fetchAllSheetsData();
         async function fetchBusSchedule() {
     try {
         // Google Apps Script (GAS) のデプロイURL
-        const url = 'https://script.google.com/macros/s/AKfycbwIAPY3OFzCBDU388qWGjqHhSXWa_8Qvj5MTt-8MWFCESKoK5Iw4NnQ402moWiByV6Ang/exec'; // ← 実際のURLに変更
+        const url = 'https://script.google.com/macros/s/AKfycbwIAPY3OFzCBDU388qWGjqHhSXWa_8Qvj5MTt-8MWFCESKoK5Iw4NnQ402moWiByV6Ang/exec'; // GASのURLに変更
 
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTPエラー: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log("取得したデータ:", data);
 
@@ -411,12 +411,12 @@ fetchAllSheetsData();
             orange: {
                 weekday: data.orange.weekday,
                 saturday: data.orange.saturday,
-                holiday: data.orange.holiday
+                holiday: data.holyday.orange // 🔹 "holyday" シートのオレンジルートを格納
             },
             green: {
                 weekday: data.green.weekday,
                 saturday: data.green.saturday,
-                holiday: data.green.holiday
+                holiday: data.holyday.green // 🔹 "holyday" シートのグリーンルートを格納
             }
         };
 
