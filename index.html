@@ -363,18 +363,36 @@
         
         // スプレッドシートからデータを取得 - CORS対応版
         async function fetchAllSheetsData() {
-    const url = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec'; // GASのURLに変更
+    const url = 'https://script.google.com/macros/s/AKfycbw6mCr8G_d-CetM4lle56QD1UBCy1q9cH_JuA4PIfFw09y9h826b4p7Z-ccPVWKbQXdnA/exec'; // GASのURLに変更
 
     try {
-        const response = await fetch(url);
+        console.log("Fetching data from:", url);
+
+        const response = await fetch(url, {
+            method: "GET",
+            mode: "no-cors",  // CORSエラー回避
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+        console.log("Response:", response);
+
         if (!response.ok) {
             throw new Error(`HTTPエラー: ${response.status}`);
         }
 
-        const data = await response.json();
-        console.log("取得した全シートのデータ:", data);
-        
+        const text = await response.text();
+        console.log("取得したデータ:", text);
+
+        const data = JSON.parse(text);  // ここでエラーが出るならGASの出力を確認
+        console.log("パース後のデータ:", data);
+
         // 各シートのデータを取得する方法
+        if (!data || Object.keys(data).length === 0) {
+            throw new Error("データが空です。GASのスクリプトを確認してください。");
+        }
+
         console.log("Sheet1 のデータ:", data["Sheet1"]);
         console.log("Sheet2 のデータ:", data["Sheet2"]);
 
