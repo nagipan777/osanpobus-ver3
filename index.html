@@ -421,32 +421,22 @@ fetchAllSheetsData();
         // スプレッドシートのデータを取得（GASのWeb APIを使用）
         async function fetchBusSchedule() {
     try {
-        const url = GAS_WEB_APP_URL;
+        const url = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
 
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTPエラー: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("取得したデータ:", data);
-
-        state.busSchedule = {
-
-            orange: {
-                weekday: data.orange?.weekday || [],
-                saturday: data.orange?.saturday || [],
-                holiday: data.orange?.holiday || [] // 祝日・日曜用
-            },
-            green: {
-                weekday: data.green?.weekday || [],
-                saturday: data.green?.saturday || [],
-                holiday: data.green?.holiday || [] // 祝日・日曜用
+        const response = await fetch(url, {
+            method: "GET",
+            mode: "no-cors", // CORSエラーを防ぐ
+            headers: {
+                "Content-Type": "application/json"
             }
-        };
+        });
 
-        console.log("バススケジュールが更新されました:", state.busSchedule);
-        return state.busSchedule;
+        console.log("Response:", response);
+
+        // `no-cors` を使うと、レスポンスを JSON としてパースできないため一旦削除
+        // const data = await response.json(); // ここを削除
+        console.log("取得したデータ:", response); // これでレスポンスの確認
+
     } catch (error) {
         console.error('スプレッドシートデータの読み込みに失敗しました:', error);
         errorContainerEl.textContent = `エラー: スプレッドシートデータの取得に失敗しました`;
