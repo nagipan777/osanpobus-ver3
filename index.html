@@ -461,28 +461,31 @@ fetchAllSheetsData();
         }
         
         // 祝日かどうかを確認
+        // 祝日かどうかを確認（日曜日は祝日扱いせず区別する）
         async function checkIfHoliday() {
-            try {
-                const today = new Date();
-                const formattedDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
-                
-                // 日本の祝日APIを使用 (例: 祝日APIサービスのエンドポイント)
-                // 注: 実際の実装では適切な祝日APIを使用してください
-                // const response = await fetch(`https://holidays-jp.github.io/api/v1/${today.getFullYear()}/date.json`);
-                // const holidayData = await response.json();
-                // state.isHoliday = holidayData[formattedDate] !== undefined;
-                
-                // 簡易実装：日曜日を祝日扱いにする
-                state.isHoliday = today.getDay() === 0; // 日曜日の場合はtrue
-                
-                return state.isHoliday;
-            } catch (error) {
-                console.error('祝日確認中にエラーが発生しました:', error);
-                // エラーがあっても処理を続行（祝日でないと仮定）
-                state.isHoliday = false;
-                return false;
-            }
+        try {
+            const today = new Date();
+            const formattedDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+        
+            // 簡易実装：祝日APIの代わりに手動で日付リストを管理
+            const holidays = [
+                "2025-01-01", "2025-02-11", "2025-03-21", "2025-04-29",
+                "2025-05-03", "2025-05-04", "2025-05-05", "2025-07-15",
+                "2025-08-11", "2025-09-16", "2025-09-23", "2025-10-14",
+                "2025-11-03", "2025-11-23", "2025-12-23"
+            ];
+
+            state.isSunday = today.getDay() === 0;  // 日曜日判定
+            state.isHoliday = holidays.includes(formattedDate);  // 祝日判定
+        
+            return { isHoliday: state.isHoliday, isSunday: state.isSunday };
+        } catch (error) {
+            console.error('祝日確認中にエラーが発生しました:', error);
+            state.isHoliday = false;
+            state.isSunday = false;
+            return { isHoliday: false, isSunday: false };
         }
+    }
         
         // 気象条件を確認
         async function checkWeatherConditions() {
@@ -514,76 +517,62 @@ fetchAllSheetsData();
             }
         }
         
-        // 次のバス発車時刻を計算
+            // 次のバス発車時刻を計算
         function updateNextBusInfo() {
             if (!state.busSchedule) return;
-            
+
             const now = new Date();
             const day = now.getDay(); // 0:日, 1:月, ... 6:土
             const currentHour = now.getHours();
             const currentMinute = now.getMinutes();
             const currentTimeValue = currentHour * 60 + currentMinute; // 分単位での現在時刻
-            
+
             // 運行スケジュールの選択（平日、土曜、日曜・祝日）
             let schedule;
-            if (state.isHoliday || day === 0) { // 祝日または日曜日
-                schedule = state.busSchedule[state.currentRoute].holiday;
-            } else if (day === 6) { // 土曜日
-                schedule = state.busSchedule[state.currentRoute].saturday;
-            } else { // 平日（月〜金）
-                schedule = state.busSchedule[state.currentRoute].weekday;
+            let scheduleType = '平日';
+
+            if (state.isHoliday) { 
+            updateStatus('not-running', '本日は祝日のため運休です');
+            return;
             }
-            
-            // 運休かどうか判定
-            if (state.isHoliday && (!schedule || schedule.length === 0)) {
-                updateStatus('not-running', '本日は祝日のため運休です');
-                return;
-            }
-            
-            if (state.isSuspendedDueToWeather) {
-                updateStatus('not-running', '悪天候のため運休中です');
-                return;
-            }
-            
-            if (day === 0 && (!schedule || schedule.length === 0)) { // 日曜日で運行がない場合
-                updateStatus('not-running', '日曜日は運休です');
-                return;
-            }
-            
-            if (!schedule || schedule.length === 0) {
-                updateStatus('not-running', '本日の運行予定はありません');
-                return;
-            }
-            
-            // 次のバスを探す
-            let nextBusTime = null;
-            let minutesToNext = Infinity;
-            
-            for (const timeStr of schedule) {
-                const [hours, minutes] = timeStr.split(':').map(Number);
-                const busTimeValue = hours * 60 + minutes; // 分単位でのバス時刻
-                
-                const diff = busTimeValue - currentTimeValue;
-                
-                if (diff > 0 && diff < minutesToNext) {
-                    minutesToNext = diff;
-                    nextBusTime = timeStr;
-                }
-            }
-            
-            // 次のバスがない場合（最終バスが過ぎた場合）
-            if (!nextBusTime) {
-                updateStatus('day-ended', '本日の運行は終了しました');
-                return;
-            }
-            
-            // 次のバス情報を更新
-            state.nextBusDeparture = nextBusTime;
-            state.minutesToNextBus = minutesToNext;
-            
-            updateStatus('running', '本日は運行しています');
-            nextBusEl.textContent = `次のバスは ${nextBusTime} （あと${minutesToNext}分）`;
+
+        if (state.isSunday) {
+            schedule = state.busSchedule[state.currentRoute].holiday; // 日曜日専用スケジュール
+            scheduleType = '日曜コース';
+        } else {
+            schedule = state.busSchedule[state.currentRoute].weekday;
         }
+
+        if (!schedule || schedule.length === 0) {
+            updateStatus('not-running', `本日の運行はありません`);
+            return;
+        }
+
+        let nextBusTime = null;
+        let minutesToNext = Infinity;
+
+        for (const timeStr of schedule) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const busTimeValue = hours * 60 + minutes; // 分単位でのバス時刻
+            const diff = busTimeValue - currentTimeValue;
+
+            if (diff > 0 && diff < minutesToNext) {
+                minutesToNext = diff;
+                nextBusTime = timeStr;
+            }
+        }
+
+        if (!nextBusTime) {
+            updateStatus('day-ended', '本日の運行は終了しました');
+            return;
+        }
+
+        state.nextBusDeparture = nextBusTime;
+        state.minutesToNextBus = minutesToNext;
+
+        updateStatus('running', `本日は${scheduleType}で運行しています`);
+        nextBusEl.textContent = `次のバスは ${nextBusTime} （あと${minutesToNext}分）`;
+    }
         
         // 運行状況表示を更新
         function updateStatus(statusClass, statusText) {
