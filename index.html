@@ -354,86 +354,44 @@
         }
         
         // スプレッドシートからデータを取得 - CORS対応版
-        async function fetchBusSchedule() {
-            try {
-                // --- 解決策1: JSONP形式でデータを取得 ---
-                const jsonpUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
-                
-                return new Promise((resolve, reject) => {
-                    // JSONP用のスクリプトタグを作成
-                    const script = document.createElement('script');
-                    
-                    // 一時的なコールバック関数名を生成
-                    const callbackName = 'jsonpCallback_' + Math.round(Math.random() * 1000000);
-                    
-                    // グローバルにコールバック関数を定義
-                    window[callbackName] = function(response) {
-                        try {
-                            // Google Sheetsの応答を処理
-                            if (response.status === 'error') {
-                                reject(new Error(response.errors[0].message));
-                                return;
-                            }
-                            
-                            // データの解析
-                            const rawData = response.table.rows;
-                            
-                            // データの構造化 (rawDataの構造に合わせて調整が必要)
-                            const scheduleData = {
-                                orange: {
-                                    weekday: extractTimeSchedule(rawData, 'orange', 'weekday'),
-                                    saturday: extractTimeSchedule(rawData, 'orange', 'saturday'),
-                                    holiday: extractTimeSchedule(rawData, 'orange', 'holiday')
-                                },
-                                green: {
-                                    weekday: extractTimeSchedule(rawData, 'green', 'weekday'),
-                                    saturday: extractTimeSchedule(rawData, 'green', 'saturday'),
-                                    holiday: extractTimeSchedule(rawData, 'green', 'holiday')
-                                }
-                            };
-                            
-                            state.busSchedule = scheduleData;
-                            resolve(scheduleData);
-                        } catch (e) {
-                            reject(e);
-                        } finally {
-                            // クリーンアップ：スクリプトタグとグローバルコールバックを削除
-                            document.body.removeChild(script);
-                            delete window[callbackName];
-                        }
-                    };
-                    
-                    // スクリプトソースURLにコールバック名を追加
-                    script.src = `${jsonpUrl}&tqrt=tqcallback&tqc=${callbackName}`;
-                    script.onerror = () => reject(new Error('スプレッドシートデータの読み込みに失敗しました'));
-                    
-                    // DOMにスクリプトを追加して実行
-                    document.body.appendChild(script);
-                });
-                
-                // --- データ取得に失敗した場合のフォールバックとしてモックデータを使用 ---
-            } catch (error) {
-                console.error('バススケジュールの取得に失敗しました:', error);
-                
-                // フォールバック：モックデータを使用
-                const mockData = {
-                    orange: {
-                        weekday: ['7:00', '8:30', '10:00', '11:30', '13:00', '14:30', '16:00', '17:30'],
-                        saturday: ['7:00', '8:30', '10:00', '11:30', '13:00', '14:30', '16:00', '17:30'],
-                        holiday: ['9:00', '11:00', '13:00', '15:00', '17:00']
-                    },
-                    green: {
-                        weekday: ['7:15', '8:45', '10:15', '11:45', '13:15', '14:45', '16:15', '17:45'],
-                        saturday: ['7:15', '8:45', '10:15', '11:45', '13:15', '14:45', '16:15', '17:45'],
-                        holiday: ['9:30', '11:30', '13:30', '15:30', '17:30']
-                    }
-                };
-                
-                console.log('モックデータを使用します');
-                state.busSchedule = mockData;
-                return mockData;
-            }
+        // スプレッドシートのデータを取得（GASのWeb APIを使用）
+async function fetchBusSchedule() {
+    try {
+        // Google Apps Script (GAS) のデプロイURL
+        const url = 'https://script.google.com/macros/s/AKfycbx72ntNDsz2upKWKHcyGoXywot-rBoka01Dlhqe3FBfIKveBl_mtb1ZO3CBeUsrrm0Ugw/exec'; // ← 実際のURLに変更
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTPエラー: ${response.status}`);
         }
+        
+        const data = await response.json();
+        console.log("取得したデータ:", data);
+
+        // データを state に格納
+        state.busSchedule = {
+            orange: {
+                weekday: data.orange.weekday,
+                saturday: data.orange.saturday,
+                holiday: data.orange.holiday
+            },
+            green: {
+                weekday: data.green.weekday,
+                saturday: data.green.saturday,
+                holiday: data.green.holiday
+            }
+        };
+
+        console.log("バススケジュールが更新されました:", state.busSchedule);
+        return state.busSchedule;
+    } catch (error) {
+        console.error('スプレッドシートデータの読み込みに失敗しました:', error);
+        errorContainerEl.textContent = `エラー: スプレッドシートデータの取得に失敗しました`;
+        errorContainerEl.style.display = 'block';
+        loadingEl.style.display = 'none';
+        return null;
+    }
+}
         
         // スプレッドシートのデータから時刻表を抽出するヘルパー関数
         function extractTimeSchedule(rows, routeType, dayType) {
