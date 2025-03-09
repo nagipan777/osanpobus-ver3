@@ -90,6 +90,11 @@
             background-color: #4CAF50;
             color: white;
         }
+        .route-purple {
+            background-color: #800080;
+            color: white;
+            color: white;
+        }
         .route-btn.active {
             box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
             font-weight: bold;
@@ -206,6 +211,7 @@
         <div class="route-selector">
             <button class="route-btn route-orange active" id="orange-route">オレンジコース</button>
             <button class="route-btn route-green" id="green-route">グリーンコース</button>
+            <button class="route-btn route-purple" id="purple-route" style="display: none;">日曜コース</button>
         </div>
         
         <div id="status-container">
@@ -256,10 +262,12 @@
         const errorContainerEl = document.getElementById('error-container');
         const orangeRouteBtn = document.getElementById('orange-route');
         const greenRouteBtn = document.getElementById('green-route');
+        const purpleRouteBtn = document.getElementById('purple-route');
         
         // アプリケーションの状態
         let state = {
             currentRoute: 'orange', // 'orange' または 'green'
+            isSundayCourse: false,
             isHoliday: false,
             isSuspendedDueToWeather: false,
             busSchedule: null,
@@ -360,37 +368,7 @@
                 loadingEl.style.display = 'none';
             }
         }
-        // スプレッドシートデータ取得
-        async function fetchAllSheetsData() {
-    const url = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec'; // 最新のGAS URL
-
-    try {
-        console.log("Fetching data from:", url);
-
-        const response = await fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json"
-            }
-        });
-
-        console.log("Response:", response);
-
-        if (!response.ok) {
-            throw new Error(`HTTPエラー: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("取得したデータ:", data);
-
-    } catch (error) {
-        console.error("スプレッドシートデータの取得に失敗しました:", error);
-    }
-}
-
-// 実行
-fetchAllSheetsData();
-        
+       
         // スプレッドシートのデータを取得（GASのWeb APIを使用）
         async function fetchBusSchedule() {
     try {
@@ -657,7 +635,45 @@ fetchAllSheetsData();
         }
         
         // ページ読み込み時にアプリを初期化
-        window.addEventListener('DOMContentLoaded', initApp);
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+
+            // 日曜日判定とボタン表示
+            const now = new Date();
+            const dayIndex = now.getDay();
+            if (dayIndex === 0) { // 0は日曜日
+                purpleRouteBtn.style.display = 'inline-block'; // 表示
+            }
+
+            // 紫ボタンがクリックされたときの処理
+            purpleRouteBtn.addEventListener('click', () => {
+                setRoute('purple');
+            });
+        });
+
+         // ルート切り替え関数を修正
+         function setRoute(route) {
+            state.currentRoute = route;
+            state.isSundayCourse = route === 'purple';
+
+            // ボタンのアクティブ状態を更新
+            orangeRouteBtn.classList.remove('active');
+            greenRouteBtn.classList.remove('active');
+            purpleRouteBtn.classList.remove('active');
+
+            if (route === 'orange') {
+                orangeRouteBtn.classList.add('active');
+            } else if (route === 'green') {
+                greenRouteBtn.classList.add('active');
+            } else if (route === 'purple') {
+                purpleRouteBtn.classList.add('active');
+            }
+
+            // 次のバス情報を更新
+            updateNextBusInfo();
+            updateTimetableDisplay();
+        }
+
     </script>
-</body>
+</head>
 </html>
