@@ -360,36 +360,6 @@
                 loadingEl.style.display = 'none';
             }
         }
-        
-        async function fetchAllSheetsData() {
-    const url = 'https://script.google.com/macros/s/AKfycbwIAPY3OFzCBDU388qWGjqHhSXWa_8Qvj5MTt-8MWFCESKoK5Iw4NnQ402moWiByV6Ang/exec'; // 最新のGAS URL
-
-    try {
-        console.log("Fetching data from:", url);
-
-        const response = await fetch(url, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json"
-            }
-        });
-
-        console.log("Response:", response);
-
-        if (!response.ok) {
-            throw new Error(`HTTPエラー: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("取得したデータ:", data);
-
-    } catch (error) {
-        console.error("スプレッドシートデータの取得に失敗しました:", error);
-    }
-}
-
-// 実行
-fetchAllSheetsData();  
 
         
         // スプレッドシートのデータを取得（GASのWeb APIを使用）
