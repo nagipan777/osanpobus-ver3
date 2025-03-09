@@ -245,7 +245,7 @@
         
         // Google Apps Script Webアプリケーションのデプロイ先URL（CORS対応のため）
         // 注: 実際の使用前にデプロイする必要があります
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3/exec';
         
         const WEATHER_API_KEY = 'aedbab52747a52984fdcedcb196bc105';
         const WEATHER_CITY_ID = '1851604'; // 蟹江町の都市ID
@@ -402,7 +402,7 @@
         console.log("取得したデータ:", data);
 
         state.busSchedule = {
-            
+
             orange: {
                 weekday: data.orange?.weekday || [],
                 saturday: data.orange?.saturday || [],
