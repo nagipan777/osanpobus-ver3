@@ -91,7 +91,7 @@
             color: white;
         }
         .route-purple {
-            background-color: #800080;
+            background-color: #A020F0;
             color: white;
             color: white;
         }
@@ -296,6 +296,10 @@
 
         // 60秒ごとに情報を自動更新
         setInterval(updateNextBusInfo, 60000);
+
+        // 毎日0時0分にデータを更新
+        setInterval(refreshDataAtMidnight, 86400000); // 24時間ごとに実行 (ミリ秒)
+
         console.log("initApp() 完了");
     } catch (error) {
         console.error("アプリ初期化中にエラーが発生しました:", error);
@@ -303,6 +307,21 @@
         errorContainerEl.style.display = 'block';
     }
 }
+
+        // 0時0分にデータを更新する関数
+        function refreshDataAtMidnight() {
+            const now = new Date();
+            const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0); // 次の日の0時0分
+            const timeUntilMidnight = midnight.getTime() - now.getTime();
+
+            setTimeout(() => {
+                console.log("0時になりました。データを更新します。");
+                refreshData();
+                // 以降も毎日0時に更新するために、再度設定
+                setInterval(refreshDataAtMidnight, 86400000);
+            }, timeUntilMidnight);
+        }
+
         // 現在時刻と曜日の更新
         function updateCurrentTime() {
             const now = new Date();
