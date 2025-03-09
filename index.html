@@ -91,7 +91,7 @@
             color: white;
         }
         .route-purple {
-            background-color: #ae76d2;
+            background-color: #b39ddb;
             color: white;
             color: white;
         }
@@ -467,8 +467,7 @@
             // 簡易実装：祝日APIの代わりに手動で日付リストを管理
             const holidays = [
                 "2025-01-01", "2025-02-11", "2025-03-21", "2025-04-29",
-                "2025-05-03", "2025-05-04", "2025-05-05", "2025-07-15",
-                "2025-08-11", "2025-09-16", "2025-09-23", "2025-10-14",
+                "2025-05-03", "2025-05-05", "2025-07-15", "2025-08-11", "2025-09-16", "2025-09-23", "2025-10-14",
                 "2025-11-03", "2025-11-23", "2025-12-23"
             ];
 
@@ -656,18 +655,8 @@
         window.addEventListener('DOMContentLoaded', () => {
             initApp();
 
-            // 日曜日判定とボタン表示
-            const now = new Date();
-            const dayIndex = now.getDay();
-            if (dayIndex === 0) { // 0は日曜日
-                purpleRouteBtn.style.display = 'inline-block'; // 表示
-                orangeRouteBtn.style.display = 'none'; // 非表示
-                greenRouteBtn.style.display = 'none'; // 非表示
-            } else {
-                purpleRouteBtn.style.display = 'none'; // 非表示
-                orangeRouteBtn.style.display = 'inline-block'; // 表示
-                greenRouteBtn.style.display = 'inline-block'; // 表示
-            }
+            // 初期表示設定
+            updateRouteButtonVisibility();
 
             // 紫ボタンがクリックされたときの処理
             purpleRouteBtn.addEventListener('click', () => {
@@ -675,24 +664,36 @@
             });
         });
 
+        function updateRouteButtonVisibility() {
+            const now = new Date();
+            const dayIndex = now.getDay();
+            const isNotRunning = state.operatingStatus === 'not-running' || state.operatingStatus === 'day-ended';
+
+            orangeRouteBtn.style.display = 'none';
+            greenRouteBtn.style.display = 'none';
+            purpleRouteBtn.style.display = 'none';
+
+            if (isNotRunning) {
+                orangeRouteBtn.style.display = 'none';
+                greenRouteBtn.style.display = 'none';
+                purpleRouteBtn.style.display = 'none';
+            } else if (dayIndex === 0) { // 日曜日
+                purpleRouteBtn.style.display = 'inline-block';
+                orangeRouteBtn.style.display = 'none';
+                greenRouteBtn.style.display = 'none';
+            } else { // 平日
+                orangeRouteBtn.style.display = 'inline-block';
+                greenRouteBtn.style.display = 'inline-block';
+                purpleRouteBtn.style.display = 'none';
+            }
+        }
+
          // ルート切り替え関数を修正
-         function setRoute(route) {
+        function setRoute(route) {
             state.currentRoute = route;
             state.isSundayCourse = route === 'purple';
 
-            // ボタンのアクティブ状態を更新
-            orangeRouteBtn.classList.remove('active');
-            greenRouteBtn.classList.remove('active');
-            purpleRouteBtn.classList.remove('active');
-
-            if (route === 'orange') {
-                orangeRouteBtn.classList.add('active');
-            } else if (route === 'green') {
-                greenRouteBtn.classList.add('active');
-            } else if (route === 'purple') {
-                purpleRouteBtn.classList.add('active');
-            }
-
+            updateRouteButtonVisibility();
             // 次のバス情報を更新
             updateNextBusInfo();
             updateTimetableDisplay();
