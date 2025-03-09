@@ -378,9 +378,6 @@
                 // 5. 時刻表を表示
                 updateTimetableDisplay();
                 
-                // 6. CSVデータを処理
-                await processCSVData();
-
                 loadingEl.style.display = 'none';
                 timetableContainerEl.style.display = 'block';
             } catch (error) {
@@ -467,8 +464,25 @@
 //         }
     // スプレッドシートデータ取得の代わりにCSV
     async function processCSVData() {
-        console.log("processCSVData() called");
-    }
+    const csvArray = await fetchCSVData();
+    if (!csvArray) return;
+
+    let jsonData = {};
+    let currentSheet = "";
+    
+    csvArray.forEach(row => {
+        if (row.length === 1 && row[0].startsWith("---")) {
+            // シート名の部分
+            currentSheet = row[0].replace(/---|---/g, "").trim();
+            jsonData[currentSheet] = [];
+        } else if (currentSheet && row.length > 1) {
+            jsonData[currentSheet].push(row);
+        }
+    });
+
+    console.log("JSON データ:", jsonData);
+    return jsonData;
+}
         
         // スプレッドシートのデータから時刻表を抽出するヘルパー関数
         function extractTimeSchedule(rows, routeType, dayType) {
