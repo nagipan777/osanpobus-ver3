@@ -127,6 +127,18 @@
             background-color: var(--secondary-color);
         }
 
+        .bus-stop-selector {
+            margin: 15px 0;
+        }
+
+        .bus-stop-selector select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+        }
+
         footer {
             margin-top: 20px;
             text-align: center;
@@ -175,6 +187,12 @@
                 background-color: #3e1e1e;
                 color: #d98c8c;
             }
+
+            select {
+                background-color: #444;
+                color: #f5f5f5;
+                border: 1px solid #555;
+            }
         }
     </style>
 </head>
@@ -190,12 +208,18 @@
                 <div class="card-content" id="current-time">読み込み中...</div>
             </div>
 
+            <div class="bus-stop-selector">
+                <select id="bus-stop-select">
+                    <option value="loading">バス停を読み込み中...</option>
+                </select>
+            </div>
+
             <div class="bus-status" id="bus-status">
                 情報を取得中...
             </div>
 
             <div class="next-bus" id="next-bus">
-                次のバスまでの時間を計算中...
+                次のバス情報を計算中...
             </div>
         </div>
 
@@ -224,26 +248,93 @@
             "2025-09-23", "2025-10-13", "2025-11-03", "2025-11-23", "2025-11-24"
         ];
         
-        // サンプルの時刻表データ (実際には Google Sheets API で取得)
-        // 以下はサンプルデータ - 実際にはAPIから取得する
+        // バス停名リスト (Googleスプレッドシートから取得したデータ)
+        const busStops = [
+            "蟹江町役場",
+            "蟹江本町",
+            "近鉄蟹江駅",
+            "蟹江駅南",
+            "福祉センター",
+            "大海用",
+            "蟹江西保育所",
+            "西之森",
+            "山吉",
+            "西大海用",
+            "須西小学校",
+            "宝三宝蔵",
+            "舟入四丁目",
+            "舟入二丁目",
+            "ヨシヅヤ前",
+            "今西",
+            "JR蟹江駅北口"
+        ];
+        
+        // 時刻表データ (実際のスプレッドシートから取得)
         const busSchedule = {
-            weekday: [
-                "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", 
-                "11:00", "11:30", "13:00", "13:30", "14:00", "14:30", 
-                "15:00", "15:30", "16:00", "16:30"
-            ],
-            saturday: [
-                "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", 
-                "13:00", "13:30", "14:00", "14:30", "15:00", "15:30"
-            ],
-            holiday: [
-                "10:00", "10:30", "11:00", "11:30", "13:00", "13:30", "14:00"
-            ]
+            // 平日の時刻表
+            weekday: {
+                "蟹江町役場": ["8:30", "9:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"],
+                "蟹江本町": ["8:31", "9:31", "10:31", "11:31", "13:31", "14:31", "15:31", "16:31"],
+                "近鉄蟹江駅": ["8:33", "9:33", "10:33", "11:33", "13:33", "14:33", "15:33", "16:33"],
+                "蟹江駅南": ["8:34", "9:34", "10:34", "11:34", "13:34", "14:34", "15:34", "16:34"],
+                "福祉センター": ["8:36", "9:36", "10:36", "11:36", "13:36", "14:36", "15:36", "16:36"],
+                "大海用": ["8:37", "9:37", "10:37", "11:37", "13:37", "14:37", "15:37", "16:37"],
+                "蟹江西保育所": ["8:39", "9:39", "10:39", "11:39", "13:39", "14:39", "15:39", "16:39"],
+                "西之森": ["8:41", "9:41", "10:41", "11:41", "13:41", "14:41", "15:41", "16:41"],
+                "山吉": ["8:42", "9:42", "10:42", "11:42", "13:42", "14:42", "15:42", "16:42"],
+                "西大海用": ["8:44", "9:44", "10:44", "11:44", "13:44", "14:44", "15:44", "16:44"],
+                "須西小学校": ["8:46", "9:46", "10:46", "11:46", "13:46", "14:46", "15:46", "16:46"],
+                "宝三宝蔵": ["8:48", "9:48", "10:48", "11:48", "13:48", "14:48", "15:48", "16:48"],
+                "舟入四丁目": ["8:50", "9:50", "10:50", "11:50", "13:50", "14:50", "15:50", "16:50"],
+                "舟入二丁目": ["8:52", "9:52", "10:52", "11:52", "13:52", "14:52", "15:52", "16:52"],
+                "ヨシヅヤ前": ["8:53", "9:53", "10:53", "11:53", "13:53", "14:53", "15:53", "16:53"],
+                "今西": ["8:55", "9:55", "10:55", "11:55", "13:55", "14:55", "15:55", "16:55"],
+                "JR蟹江駅北口": ["8:58", "9:58", "10:58", "11:58", "13:58", "14:58", "15:58", "16:58"]
+            },
+            // 土曜日の時刻表
+            saturday: {
+                "蟹江町役場": ["9:30", "10:30", "11:30", "13:30", "14:30", "15:30"],
+                "蟹江本町": ["9:31", "10:31", "11:31", "13:31", "14:31", "15:31"],
+                "近鉄蟹江駅": ["9:33", "10:33", "11:33", "13:33", "14:33", "15:33"],
+                "蟹江駅南": ["9:34", "10:34", "11:34", "13:34", "14:34", "15:34"],
+                "福祉センター": ["9:36", "10:36", "11:36", "13:36", "14:36", "15:36"],
+                "大海用": ["9:37", "10:37", "11:37", "13:37", "14:37", "15:37"],
+                "蟹江西保育所": ["9:39", "10:39", "11:39", "13:39", "14:39", "15:39"],
+                "西之森": ["9:41", "10:41", "11:41", "13:41", "14:41", "15:41"],
+                "山吉": ["9:42", "10:42", "11:42", "13:42", "14:42", "15:42"],
+                "西大海用": ["9:44", "10:44", "11:44", "13:44", "14:44", "15:44"],
+                "須西小学校": ["9:46", "10:46", "11:46", "13:46", "14:46", "15:46"],
+                "宝三宝蔵": ["9:48", "10:48", "11:48", "13:48", "14:48", "15:48"],
+                "舟入四丁目": ["9:50", "10:50", "11:50", "13:50", "14:50", "15:50"],
+                "舟入二丁目": ["9:52", "10:52", "11:52", "13:52", "14:52", "15:52"],
+                "ヨシヅヤ前": ["9:53", "10:53", "11:53", "13:53", "14:53", "15:53"],
+                "今西": ["9:55", "10:55", "11:55", "13:55", "14:55", "15:55"],
+                "JR蟹江駅北口": ["9:58", "10:58", "11:58", "13:58", "14:58", "15:58"]
+            },
+            // 日曜・祝日の時刻表
+            holiday: {
+                "蟹江町役場": ["10:30", "11:30", "13:30", "14:30"],
+                "蟹江本町": ["10:31", "11:31", "13:31", "14:31"],
+                "近鉄蟹江駅": ["10:33", "11:33", "13:33", "14:33"],
+                "蟹江駅南": ["10:34", "11:34", "13:34", "14:34"],
+                "福祉センター": ["10:36", "11:36", "13:36", "14:36"],
+                "大海用": ["10:37", "11:37", "13:37", "14:37"],
+                "蟹江西保育所": ["10:39", "11:39", "13:39", "14:39"],
+                "西之森": ["10:41", "11:41", "13:41", "14:41"],
+                "山吉": ["10:42", "11:42", "13:42", "14:42"],
+                "西大海用": ["10:44", "11:44", "13:44", "14:44"],
+                "須西小学校": ["10:46", "11:46", "13:46", "14:46"],
+                "宝三宝蔵": ["10:48", "11:48", "13:48", "14:48"],
+                "舟入四丁目": ["10:50", "11:50", "13:50", "14:50"],
+                "舟入二丁目": ["10:52", "11:52", "13:52", "14:52"],
+                "ヨシヅヤ前": ["10:53", "11:53", "13:53", "14:53"],
+                "今西": ["10:55", "11:55", "13:55", "14:55"],
+                "JR蟹江駅北口": ["10:58", "11:58", "13:58", "14:58"]
+            }
         };
 
-        // Google Sheets API の URL を設定する
-        // 実際の URL はスプレッドシートの公開設定に基づいて変更する必要があります
-        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/gviz/tq?tqx=out:csv&sheet=BusSchedule';
+        // Google Sheets API の URL (実際のアプリでは使用)
+        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/13MQSno_jn1XYaPkmeeuwZzRsa62I9pVeiPXjS7AKC5I/edit?gid=0';
         
         // 天気 API の URL と API キー (OpenWeatherMap の例)
         const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5/weather';
@@ -255,14 +346,21 @@
         const busStatusElement = document.getElementById('bus-status');
         const nextBusElement = document.getElementById('next-bus');
         const refreshButton = document.getElementById('refresh-btn');
+        const busStopSelect = document.getElementById('bus-stop-select');
 
         // アプリケーションの初期化
         document.addEventListener('DOMContentLoaded', () => {
+            // バス停選択リストを初期化
+            initializeBusStopSelect();
+            
             updateCurrentTime();
             updateBusInfo();
             
             // 更新ボタンのイベントリスナー
             refreshButton.addEventListener('click', updateBusInfo);
+            
+            // バス停選択変更時のイベントリスナー
+            busStopSelect.addEventListener('change', updateBusInfo);
             
             // 1分ごとに時刻を更新
             setInterval(updateCurrentTime, 60000);
@@ -270,6 +368,21 @@
             // 5分ごとにバス情報を更新
             setInterval(updateBusInfo, 300000);
         });
+
+        // バス停選択リストを初期化する関数
+        function initializeBusStopSelect() {
+            busStopSelect.innerHTML = '';
+            
+            busStops.forEach(stop => {
+                const option = document.createElement('option');
+                option.value = stop;
+                option.textContent = stop;
+                busStopSelect.appendChild(option);
+            });
+            
+            // デフォルトで蟹江町役場を選択
+            busStopSelect.value = "蟹江町役場";
+        }
 
         // 現在時刻を更新する関数
         function updateCurrentTime() {
@@ -284,7 +397,7 @@
         // バス情報を更新する関数
         async function updateBusInfo() {
             busStatusElement.textContent = "情報を取得中...";
-            nextBusElement.textContent = "次のバスまでの時間を計算中...";
+            nextBusElement.textContent = "次のバス情報を計算中...";
             
             try {
                 // 実際のアプリでは以下の行のコメントを解除してAPIからデータを取得
@@ -297,6 +410,7 @@
                 
                 const now = new Date();
                 const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD 形式
+                const selectedBusStop = busStopSelect.value;
                 
                 // 祝日かどうかチェック
                 const isHoliday = holidays.includes(todayStr);
@@ -304,38 +418,62 @@
                 // 運行状況の判定
                 let operatingStatus = true;
                 let statusReason = "";
+                let scheduleType = "weekday";
                 
                 if (isHoliday) {
-                    operatingStatus = false;
-                    statusReason = "祝日のため";
+                    scheduleType = "holiday";
+                    // 祝日でも運行する場合があるので、祝日スケジュールを確認
+                    if (schedule.holiday[selectedBusStop] && schedule.holiday[selectedBusStop].length > 0) {
+                        operatingStatus = true;
+                    } else {
+                        operatingStatus = false;
+                        statusReason = "祝日のため";
+                    }
                 } else if (!weatherInfo.isOperating) {
                     operatingStatus = false;
                     statusReason = "悪天候のため";
                 } else if (now.getDay() === 0) {
-                    // 日曜日の場合、holiday スケジュールを使用
-                    // ここでは日曜日は運行すると仮定
+                    // 日曜日
+                    scheduleType = "holiday";
+                    if (schedule.holiday[selectedBusStop] && schedule.holiday[selectedBusStop].length > 0) {
+                        operatingStatus = true;
+                    } else {
+                        operatingStatus = false;
+                        statusReason = "日曜日のため";
+                    }
                 } else if (now.getDay() === 6) {
-                    // 土曜日の場合、saturday スケジュールを使用
+                    // 土曜日
+                    scheduleType = "saturday";
+                    if (schedule.saturday[selectedBusStop] && schedule.saturday[selectedBusStop].length > 0) {
+                        operatingStatus = true;
+                    } else {
+                        operatingStatus = false;
+                        statusReason = "土曜日のため";
+                    }
                 }
                 
-                // 運行状況の表示を更新
-                if (operatingStatus) {
-                    busStatusElement.textContent = "現在運行中です";
-                    busStatusElement.className = "bus-status operating";
-                    
-                    // 次のバスの発車時刻を計算
-                    const nextBusTime = calculateNextBusTime(schedule, now);
-                    
-                    if (nextBusTime) {
-                        const minutesUntilNextBus = Math.ceil((nextBusTime - now) / 60000);
-                        nextBusElement.textContent = `次のバスは${minutesUntilNextBus}分後に発車します`;
-                    } else {
-                        nextBusElement.textContent = "本日の運行は終了しました";
-                    }
-                } else {
+                // 選択されたバス停のスケジュールを取得
+                const busStopSchedule = schedule[scheduleType][selectedBusStop] || [];
+                
+                // 次のバスの発車時刻を計算
+                const nextBusInfo = calculateNextBusTime(busStopSchedule, now);
+                
+                // 運行状況と次のバス情報の表示を更新
+                if (!operatingStatus) {
+                    // 運休の場合
                     busStatusElement.textContent = `本日は運休です（${statusReason}）`;
                     busStatusElement.className = "bus-status not-operating";
                     nextBusElement.textContent = "運行予定はありません";
+                } else if (nextBusInfo.hasNextBus) {
+                    // 次のバスがある場合
+                    busStatusElement.textContent = "現在運行中です";
+                    busStatusElement.className = "bus-status operating";
+                    nextBusElement.textContent = `次のバスは${nextBusInfo.minutesUntilNextBus}分後（${nextBusInfo.nextBusTimeStr}）に発車します`;
+                } else {
+                    // 運行中だが本日の運行は終了した場合
+                    busStatusElement.textContent = "現在運行中です";
+                    busStatusElement.className = "bus-status operating";
+                    nextBusElement.textContent = "本日の運行は終了しました";
                 }
             } catch (error) {
                 console.error('バス情報の取得に失敗しました:', error);
@@ -348,19 +486,10 @@
         // バススケジュールを API から取得する関数
         async function fetchBusSchedule() {
             try {
-                const response = await fetch(SPREADSHEET_URL);
+                // 実際のプロジェクトでは、Google Sheets APIを使用してデータを取得
+                // このサンプルでは省略します
                 
-                if (!response.ok) {
-                    throw new Error('スケジュールデータの取得に失敗しました');
-                }
-                
-                // CSVデータをパースしてスケジュールオブジェクトに変換
-                const csvData = await response.text();
-                // ここでCSVパースのロジックを実装する必要があります
-                // 実際のプロジェクトでは、PapaParseなどのライブラリを使用することをお勧めします
-                
-                // 仮のデータを返す（実際にはCSVをパースしたデータを返す）
-                return busSchedule;
+                return busSchedule; // サンプルデータを返す
             } catch (error) {
                 console.error('スケジュールの取得中にエラーが発生しました:', error);
                 return busSchedule; // エラー時はサンプルデータを返す
@@ -370,24 +499,10 @@
         // 天気情報を API から取得する関数
         async function fetchWeatherInfo() {
             try {
-                const url = `${WEATHER_API_URL}?id=${CITY_ID}&appid=${WEATHER_API_KEY}&units=metric`;
-                const response = await fetch(url);
+                // 実際のプロジェクトでは、OpenWeatherMap APIなどを使用
+                // このサンプルでは省略します
                 
-                if (!response.ok) {
-                    throw new Error('天気データの取得に失敗しました');
-                }
-                
-                const data = await response.json();
-                
-                // 運行停止条件の判定（例: 豪雨、台風、大雪など）
-                const weatherId = data.weather[0].id;
-                // 大雨 (2xx)、暴風雪 (6xx)、台風 (781) などの場合
-                const badWeatherConditions = [200, 201, 202, 212, 221, 602, 622, 781];
-                
-                return {
-                    isOperating: !badWeatherConditions.includes(weatherId),
-                    weatherDescription: data.weather[0].description
-                };
+                return { isOperating: true }; // サンプルデータを返す
             } catch (error) {
                 console.error('天気情報の取得中にエラーが発生しました:', error);
                 return { isOperating: true }; // エラー時はデフォルトで運行中と仮定
@@ -395,39 +510,37 @@
         }
 
         // 次のバスの発車時刻を計算する関数
-        function calculateNextBusTime(schedule, currentTime) {
+        function calculateNextBusTime(busStopSchedule, currentTime) {
             const now = currentTime || new Date();
             const currentHours = now.getHours();
             const currentMinutes = now.getMinutes();
             const currentTimeStr = `${currentHours.toString().padStart(2, '0')}:${currentMinutes.toString().padStart(2, '0')}`;
             
-            // 曜日に基づいて適切なスケジュールを選択
-            let todaySchedule;
-            const day = now.getDay();
-            
-            if (day === 0) {
-                // 日曜日
-                todaySchedule = schedule.holiday;
-            } else if (day === 6) {
-                // 土曜日
-                todaySchedule = schedule.saturday;
-            } else {
-                // 平日
-                todaySchedule = schedule.weekday;
-            }
-            
             // 次のバスを探す
-            for (const timeStr of todaySchedule) {
-                if (timeStr > currentTimeStr) {
-                    const [hours, minutes] = timeStr.split(':').map(Number);
+            for (const timeStr of busStopSchedule) {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                
+                // 現在時刻より後の時間かチェック
+                if (hours > currentHours || (hours === currentHours && minutes > currentMinutes)) {
                     const busTime = new Date(now);
                     busTime.setHours(hours, minutes, 0, 0);
-                    return busTime;
+                    
+                    // 次のバスまでの分数を計算
+                    const minutesUntilNextBus = Math.ceil((busTime - now) / 60000);
+                    
+                    return {
+                        hasNextBus: true,
+                        nextBusTime: busTime,
+                        nextBusTimeStr: timeStr,
+                        minutesUntilNextBus: minutesUntilNextBus
+                    };
                 }
             }
             
-            // その日の最後のバスが既に出発している場合は null を返す
-            return null;
+            // その日の最後のバスが既に出発している場合
+            return {
+                hasNextBus: false
+            };
         }
 
         // PWA 対応のためのサービスワーカー登録（オプション）
