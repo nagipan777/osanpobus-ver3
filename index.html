@@ -64,6 +64,10 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+        .day-ended {
+            background-color: #cce5ff;
+            color: #004085;
+        }
         .route-selector {
             display: flex;
             justify-content: center;
@@ -171,6 +175,10 @@
                 background-color: #3b1e25;
                 color: #ea868f;
             }
+            .day-ended {
+                background-color: #1a3b5c;
+                color: #9ec5fe;
+            }
             .timetable th {
                 background-color: #2a2a2a;
             }
@@ -209,7 +217,7 @@
         
         <div id="loading" class="loading">時刻表データを読み込み中...</div>
         
-        <button class="refresh-btn" id="refresh-btn">更新する</button>
+        <button class="refresh-btn" id="refresh-btn">情報を更新する</button>
     </div>
     
     <div class="card" id="timetable-container" style="display: none;">
@@ -221,7 +229,7 @@
 
     <div class="footer">
         <p>※祝日・荒天時は運休する場合があります</p>
-        <p>© 2025 蟹江町お散歩バスアプリ</p>
+        <p>© 蟹江町お散歩バスアプリ</p>
     </div>
 
     <script>
@@ -230,7 +238,7 @@
         const SHEET_NAME = 'Sheet1';
         const SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}`;
         
-        const WEATHER_API_KEY = 'aedbab52747a52984fdcedcb196bc105'; // 実際のAPIキーに置き換えてください
+        const WEATHER_API_KEY = 'YOUR_API_KEY'; // 実際のAPIキーに置き換えてください
         const WEATHER_CITY_ID = '1851604'; // 蟹江町の都市ID (OpenWeatherMapの場合)
         
         // DOM要素の参照を保持
@@ -253,7 +261,8 @@
             isSuspendedDueToWeather: false,
             busSchedule: null,
             nextBusDeparture: null,
-            minutesToNextBus: null
+            minutesToNextBus: null,
+            operatingStatus: 'unknown' // 'running', 'not-running', 'day-ended'
         };
         
         // 初期化関数
@@ -284,7 +293,7 @@
             const days = ['日', '月', '火', '水', '木', '金', '土'];
             
             currentTimeEl.textContent = `${hours}:${minutes}`;
-            currentDayEl.textContent = `${days[dayIndex]}曜日`;
+            currentDayEl.textContent = `（${days[dayIndex]}曜日）`;
             
             // 現在時刻が変わったので、次のバス情報も更新
             if (state.busSchedule) {
@@ -474,7 +483,7 @@
             
             // 次のバスがない場合（最終バスが過ぎた場合）
             if (!nextBusTime) {
-                updateStatus('not-running', '本日の運行は終了しました');
+                updateStatus('day-ended', '本日の運行は終了しました');
                 return;
             }
             
@@ -482,16 +491,17 @@
             state.nextBusDeparture = nextBusTime;
             state.minutesToNextBus = minutesToNext;
             
-            updateStatus('running', `運行中`);
+            updateStatus('running', '現在運行中です');
             nextBusEl.textContent = `次のバスは ${nextBusTime} （あと${minutesToNext}分）`;
         }
         
         // 運行状況表示を更新
         function updateStatus(statusClass, statusText) {
+            state.operatingStatus = statusClass;
             statusEl.className = `status ${statusClass}`;
             statusEl.textContent = statusText;
             
-            if (statusClass === 'not-running') {
+            if (statusClass === 'not-running' || statusClass === 'day-ended') {
                 nextBusEl.textContent = '次のバスはありません';
             }
         }
@@ -529,7 +539,7 @@
             // 時刻表のヘッダー
             let tableHTML = `
                 <tr>
-                    <th colspan="4">${state.currentRoute === 'orange' ? 'オレンジ' : 'グリーン'}コース（${scheduleType}）</th>
+                    <th colspan="2">${state.currentRoute === 'orange' ? 'オレンジ' : 'グリーン'}コース（${scheduleType}）</th>
                 </tr>
                 <tr>
                     <th>出発時刻</th>
@@ -547,7 +557,7 @@
                 
                 if (busTimeValue < currentTimeValue) {
                     status = '出発済み';
-                } else if (busTimeValue === state.nextBusDeparture) {
+                } else if (timeStr === state.nextBusDeparture) {
                     status = `あと${state.minutesToNextBus}分`;
                     rowClass = 'next';
                 } else {
