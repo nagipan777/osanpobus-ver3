@@ -361,53 +361,45 @@
             }
         }
         
-        // スプレッドシートからデータを取得 - CORS対応版
-        async function fetchAllSheetsData() {
-        const url = 'https://script.google.com/macros/s/AKfycbw6mCr8G_d-CetM4lle56QD1UBCy1q9cH_JuA4PIfFw09y9h826b4p7Z-ccPVWKbQXdnA/exec'; // GASのURLに変更
+        function doGet() {
+  try {
+    var SPREADSHEET_ID = '13MQSno_jn1XYaPkmeeuwZzRsa62I9pVeiPXjS7AKC5I'; // スプレッドシートID
+    var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sheets = spreadsheet.getSheets();
+    var result = {};
 
-    try {
-        console.log("Fetching data from:", url);
+    sheets.forEach(sheet => {
+      var sheetName = sheet.getName();
+      var data = sheet.getDataRange().getValues();
+      var headers = data.shift();
 
-        const response = await fetch(url, {
-            method: "GET",
-            mode: "no-cors",  // CORSエラー回避
-            headers: {
-                "Content-Type": "application/json"
-            }
+      var sheetData = data.map(row => {
+        let rowObject = {};
+        headers.forEach((header, colIndex) => {
+          rowObject[header] = row[colIndex];
         });
+        return rowObject;
+      });
 
-        console.log("Response:", response);
+      result[sheetName] = sheetData;
+    });
 
-        if (!response.ok) {
-            throw new Error(`HTTPエラー: ${response.status}`);
-        }
+    var output = ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
 
-        const text = await response.text();
-        console.log("取得したデータ:", text);
-        const data = JSON.parse(text);  // ここでエラーが出るならGASの出力を確認
-        console.log("パース後のデータ:", data);
-
-        // 各シートのデータを取得する方法
-        if (!data || Object.keys(data).length === 0) {
-            throw new Error("データが空です。GASのスクリプトを確認してください。");
-        }
-
-        console.log("Sheet1 のデータ:", data["Sheet1"]);
-        console.log("Sheet2 のデータ:", data["Sheet2"]);
-
-    } catch (error) {
-        console.error("スプレッドシートデータの取得に失敗しました:", error);
-    }
+    // 🚀 **CORS ヘッダーを追加**
+    return output;
+  } catch (e) {
+    return ContentService.createTextOutput(JSON.stringify({ error: e.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
-
-// 関数を実行
-fetchAllSheetsData();
         
         // スプレッドシートのデータを取得（GASのWeb APIを使用）
         async function fetchBusSchedule() {
     try {
         // Google Apps Script (GAS) のデプロイURL
-        const url = 'https://script.google.com/macros/s/AKfycbx72ntNDsz2upKWKHcyGoXywot-rBoka01Dlhqe3FBfIKveBl_mtb1ZO3CBeUsrrm0Ugw/exec'; // ← 実際のURLに変更
+        const url = 'https://script.google.com/macros/s/AKfycbwIAPY3OFzCBDU388qWGjqHhSXWa_8Qvj5MTt-8MWFCESKoK5Iw4NnQ402moWiByV6Ang/exec'; // ← 実際のURLに変更
 
         const response = await fetch(url);
         if (!response.ok) {
