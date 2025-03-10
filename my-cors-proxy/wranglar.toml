@@ -1,0 +1,5 @@
+name = "my-cors-proxy"
+type = "javascript"
+
+account_id = "Y1a9700d-9302-483b-b2b9-3a51f0f17b49"
+workers_dev = true
