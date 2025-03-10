@@ -1,0 +1,26 @@
+{
+  "app/page.tsx -> ./components/Header": {
+    "id": 7864,
+    "files": [
+      "static/chunks/864.e55081ac38f89a26.js"
+    ]
+  },
+  "app/page.tsx -> ./components/RouteSelector": {
+    "id": 7221,
+    "files": [
+      "static/chunks/221.4cd6d69f46287e32.js"
+    ]
+  },
+  "app/page.tsx -> ./components/StatusDisplay": {
+    "id": 5301,
+    "files": [
+      "static/chunks/301.80e3040b85c43f5c.js"
+    ]
+  },
+  "app/page.tsx -> ./components/Timetable": {
+    "id": 6076,
+    "files": [
+      "static/chunks/76.691ea9a531b99b49.js"
+    ]
+  }
+}
