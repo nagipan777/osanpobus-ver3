@@ -1,15 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-// コンポーネントのインポートには動的インポートを使用するか、
-// コンポーネント自体が 'use client' 指示子を持っていることを確認する必要があります
-import dynamic from 'next/dynamic';
-
-// 動的インポートを使用してクライアントコンポーネントとして読み込む
-const Header = dynamic(() => import('./components/Header'), { ssr: false });
-const Timetable = dynamic(() => import('./components/Timetable'), { ssr: false });
-const StatusDisplay = dynamic(() => import('./components/StatusDisplay'), { ssr: false });
-const RouteSelector = dynamic(() => import('./components/RouteSelector'), { ssr: false });
+import Header from './components/Header';
+import Timetable from './components/Timetable';
+import StatusDisplay from './components/StatusDisplay';
+import RouteSelector from './components/RouteSelector';
 
 interface BusSchedule {
   orange: {
@@ -33,7 +28,6 @@ export default function Home() {
   const [nextBusDeparture, setNextBusDeparture] = useState<string | null>(null);
   const [minutesToNextBus, setMinutesToNextBus] = useState<number | null>(null);
   const [operatingStatus, setOperatingStatus] = useState('unknown');
-  const [isLoading, setIsLoading] = useState(true);
 
   // 祝日チェック機能
   useEffect(() => {
@@ -67,7 +61,6 @@ export default function Home() {
   // バススケジュールデータの取得
   useEffect(() => {
     async function fetchBusSchedule() {
-      setIsLoading(true);
       try {
         console.log("バススケジュールデータの取得を開始します");
         
@@ -102,55 +95,49 @@ export default function Home() {
         console.log("フォールバックデータを使用します");
         const fallbackData = useFallbackData();
         setBusSchedule(fallbackData);
-      } finally {
-        setIsLoading(false);
       }
     }
 
     fetchBusSchedule();
   }, []);
 
-  // スケジュールデータを処理する関数
+  // スケジュールデータを処理する関数（関数を修正して値を返すように変更）
   const processScheduleData = (data: any): BusSchedule => {
     console.log("データ処理を開始します:", data);
 
-    try {
-      // 新しいGASスクリプトの形式に合わせてデータを処理
-      const extractRouteData = (routeType: string, dayType: string) => {
-        return data["Sheet1"]
-          .filter((row: any) => row.route === routeType && row.day_type === dayType)
-          .map((row: any) => row.time)
-          .sort();
-      };
+    // 新しいGASスクリプトの形式に合わせてデータを処理
+    const extractRouteData = (routeType: string, dayType: string) => {
+      return data["Sheet1"]
+        .filter((row: any) => row.route === routeType && row.day_type === dayType)
+        .map((row: any) => row.time)
+        .sort();
+    };
 
-      const orangeWeekday = extractRouteData('orange', 'weekday');
-      const orangeHoliday = extractRouteData('orange', 'holiday');
-      const greenWeekday = extractRouteData('green', 'weekday');
-      const greenHoliday = extractRouteData('green', 'holiday');
+    const orangeWeekday = extractRouteData('orange', 'weekday');
+    const orangeHoliday = extractRouteData('orange', 'holiday');
+    const greenWeekday = extractRouteData('green', 'weekday');
+    const greenHoliday = extractRouteData('green', 'holiday');
 
-      const processedSchedule = {
-        orange: {
-          weekday: orangeWeekday,
-          holiday: orangeHoliday
-        },
-        green: {
-          weekday: greenWeekday,
-          holiday: greenHoliday
-        }
-      };
+    const processedSchedule = {
+      orange: {
+        weekday: orangeWeekday,
+        holiday: orangeHoliday
+      },
+      green: {
+        weekday: greenWeekday,
+        holiday: greenHoliday
+      }
+    };
 
-      console.log("処理したバススケジュール:", processedSchedule);
-      return processedSchedule;
-    } catch (error) {
-      console.error("データ処理中にエラーが発生しました:", error);
-      return useFallbackData();
-    }
+    console.log("処理したバススケジュール:", processedSchedule);
+    return processedSchedule;
   }
 
-  // フォールバックデータを提供する関数
+  // フォールバックデータを提供する関数（関数を修正して値を返すように変更）
   const useFallbackData = (): BusSchedule => {
     console.log("フォールバックデータを使用します");
-    // ハードコードされた時刻表
+    // ここに静的なフォールバックデータを定義できます
+    // 例: ハードコードされた時刻表
     const fallbackData: BusSchedule = {
       orange: {
         weekday: ["9:00", "10:30", "12:00", "13:30", "15:00", "16:30"],
@@ -178,9 +165,11 @@ export default function Home() {
 
       // 運行スケジュールの選択（平日、日曜・祝日）
       let schedule;
+      let scheduleType = '平日';
 
       if (isSunday) {
         schedule = busSchedule[currentRoute as 'orange' | 'green'].holiday; // 日曜日専用スケジュール
+        scheduleType = '日曜コース';
       } else if (isHoliday) {
         setOperatingStatus('not-running');
         setNextBusDeparture(null);
@@ -231,43 +220,9 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [busSchedule, currentRoute, isHoliday, isSunday]);
 
-  const refreshData = async () => {
-    try {
-      if (!GAS_WEB_APP_URL) {
-        throw new Error("GAS_WEB_APP_URLが設定されていません");
-      }
-      
-      setIsLoading(true);
-      const response = await fetch(GAS_WEB_APP_URL, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        cache: 'no-store' // キャッシュを使わない
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const processedData = processScheduleData(data);
-      setBusSchedule(processedData);
-    } catch (error) {
-      console.error('データの再取得に失敗しました:', error);
-      // エラー通知などを行う場合はここに追加
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const setRoute = (route: string) => {
     setCurrentRoute(route);
   };
-
-  if (isLoading && !busSchedule) {
-    return <div className="flex items-center justify-center min-h-screen">データを読み込み中...</div>;
-  }
 
   return (
     <div>
@@ -277,7 +232,37 @@ export default function Home() {
         operatingStatus={operatingStatus}
         nextBusDeparture={nextBusDeparture}
         minutesToNextBus={minutesToNextBus}
-        onUpdate={refreshData}
+        onUpdate={() => {
+          // ここで再取得処理を行うための関数を定義
+          async function refreshData() {
+            try {
+              if (!GAS_WEB_APP_URL) {
+                throw new Error("GAS_WEB_APP_URLが設定されていません");
+              }
+              
+              const response = await fetch(GAS_WEB_APP_URL, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                cache: 'no-store' // キャッシュを使わない
+              });
+              
+              if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
+              }
+              
+              const data = await response.json();
+              const processedData = processScheduleData(data);
+              setBusSchedule(processedData);
+            } catch (error) {
+              console.error('データの再取得に失敗しました:', error);
+              // エラー通知などを行う場合はここに追加
+            }
+          }
+          
+          refreshData();
+        }}
       />
       <Timetable
         busSchedule={busSchedule}
