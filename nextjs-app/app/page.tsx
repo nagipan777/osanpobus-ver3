@@ -17,7 +17,7 @@ interface BusSchedule {
   };
 }
 
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby3s7t899d0903VNEjbhbEMC39JeUKKFN86erO06ul-EU1ZFeVthZuNZSKvoQZfnudUBA/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby3s7t899d0903VNEjbhbEMC39JeUKKFN86erO06ul-EU1ZFeVthZuNZSKvoQZfnudUBA/exec'; // Ensure this URL is correct
 
 export default function Home() {
   const [busSchedule, setBusSchedule] = useState<BusSchedule | null>(null);
@@ -148,33 +148,33 @@ export default function Home() {
 
     const processScheduleData = (data: any) => {
       console.log("データ処理を開始します:", data);
-      
+
       // 新しいGASスクリプトの形式に合わせてデータを処理
       const extractRouteData = (routeType: string, dayType: string) => {
-          return data["Sheet1"]
-              .filter((row: any) => row.route === routeType && row.day_type === dayType)
-              .map((row: any) => row.time)
-              .sort();
+        return data["Sheet1"]
+          .filter((row: any) => row.route === routeType && row.day_type === dayType)
+          .map((row: any) => row.time)
+          .sort();
       };
-      
+
       const orangeWeekday = extractRouteData('orange', 'weekday');
       const orangeHoliday = extractRouteData('orange', 'holiday');
       const greenWeekday = extractRouteData('green', 'weekday');
       const greenHoliday = extractRouteData('green', 'holiday');
-      
+
       setBusSchedule({
-          orange: {
-              weekday: orangeWeekday,
-              holiday: orangeHoliday
-          },
-          green: {
-              weekday: greenWeekday,
-              holiday: greenHoliday
-          }
+        orange: {
+          weekday: orangeWeekday,
+          holiday: orangeHoliday
+        },
+        green: {
+          weekday: greenWeekday,
+          holiday: greenHoliday
+        }
       });
-      
+
       console.log("バススケジュールを設定しました:", busSchedule);
-    }
+    } // Ensure data processing is correct
 
     const useFallbackData = () => {
       console.log("フォールバックデータを使用します");
