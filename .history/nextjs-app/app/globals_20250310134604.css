@@ -1,0 +1,194 @@
+@import "tailwindcss/base";
+@import "tailwindcss/componemts";
+
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+  background-color: #f5f5f5;
+  color: #333;
+}
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.header h1 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 24px;
+}
+.card {
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+}
+.time-display {
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.day-display {
+  text-align: center;
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 16px;
+}
+.next-bus {
+  font-size: 24px;
+  text-align: center;
+  margin: 24px 0;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+.status {
+  text-align: center;
+  font-size: 20px;
+  margin: 16px 0;
+  padding: 12px;
+  border-radius: 8px;
+}
+.running {
+  background-color: #d4edda;
+  color: #155724;
+}
+.not-running {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+.day-ended {
+  background-color: #cce5ff;
+  color: #004085;
+}
+.route-selector {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
+.route-btn {
+  padding: 10px 20px;
+  margin: 0 8px;
+  border: none;
+  border-radius: 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+.route-orange {
+  background-color: #FF9800;
+  color: white;
+}
+.route-green {
+  background-color: #4CAF50;
+  color: white;
+}
+.route-purple {
+  background-color: #b39ddb;
+  color: white;
+}
+.route-btn.active {
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
+  font-weight: bold;
+}
+.refresh-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-top: 16px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+.refresh-btn:hover {
+  background-color: #2980b9;
+}
+.refresh-btn:active {
+  background-color: #1f6aa5;
+}
+.timetable {
+  width: 100%;
+  margin-top: 24px;
+  border-collapse: collapse;
+}
+.timetable th, .timetable td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+.timetable th {
+  background-color: #f2f2f2;
+}
+.timetable .next {
+  background-color: #fff9c4;
+  font-weight: bold;
+}
+.loading {
+  text-align: center;
+  margin: 20px 0;
+  color: #666;
+}
+.error-message {
+  color: #721c24;
+  background-color: #f8d7da;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 16px 0;
+  text-align: center;
+}
+.footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+}
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #121212;
+    color: #e0e0e0;
+  }
+  .card {
+    background-color: #1e1e1e;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+  .header h1 {
+    color: #e0e0e0;
+  }
+  .next-bus {
+    background-color: #2a2a2a;
+  }
+  .day-display {
+    color: #aaa;
+  }
+  .running {
+    background-color: #1e3a2b;
+    color: #75b798;
+  }
+  .not-running {
+    background-color: #3b1e25;
+    color: #ea868f;
+  }
+  .day-ended {
+    background-color: #1a3b5c;
+    color: #9ec5fe;
+  }
+  .timetable th {
+    background-color: #2a2a2a;
+  }
+  .timetable td {
+    border-color: #444;
+  }
+  .timetable .next {
+    background-color: #3d3c17;
+  }
+  .error-message {
+    background-color: #3b1e25;
+  }
+}
