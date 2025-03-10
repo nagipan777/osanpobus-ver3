@@ -435,13 +435,14 @@
                 // 方法2: CORSプロキシを使用
                 try {
                     console.log("CORSプロキシ経由でデータ取得を試みます");
-                    const proxyUrl = `${CORS_PROXY_URL}?url=${encodeURIComponent(GAS_WEB_APP_URL)}`;
-                    const response = await fetch(proxyUrl, {
-                        method: "GET",
-                        headers: {
-                            "Content-Type": "application/json"
-                        }
-                    });
+                    //const proxyUrl = `${CORS_PROXY_URL}?url=${encodeURIComponent(GAS_WEB_APP_URL)}`;
+                    const proxyUrl = CORS_PROXY_URL;
+                    const response = await fetch(proxyUrl ,{
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+            });
                     
                     if (!response.ok) {
                         throw new Error(`HTTP Error: ${response.status}`);
