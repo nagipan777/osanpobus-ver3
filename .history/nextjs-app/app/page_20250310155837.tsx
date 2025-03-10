@@ -208,12 +208,7 @@ export default function Home() {
     <div>
       <Header />
       <RouteSelector currentRoute={currentRoute} setRoute={setRoute} />
-      <StatusDisplay
-        operatingStatus={operatingStatus}
-        nextBusDeparture={nextBusDeparture}
-        minutesToNextBus={minutesToNextBus}
-        onUpdate={fetchBusSchedule}
-      />
+      <StatusDisplay operatingStatus={operatingStatus} nextBusDeparture={nextBusDeparture} minutesToNextBus={minutesToNextBus} />
       <Timetable
         busSchedule={busSchedule}
         currentRoute={currentRoute}

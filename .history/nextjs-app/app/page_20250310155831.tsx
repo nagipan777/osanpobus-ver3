@@ -35,7 +35,7 @@ export default function Home() {
         
         // GASスクリプトからデータを直接取得（CORS対応済み）
         console.log("GASスクリプトから直接データを取得します");
-        const response = await fetch(GAS_WEB_APP_URL || "", {
+        const response = await fetch(GAS_WEB_APP_URL, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json"
@@ -208,12 +208,7 @@ export default function Home() {
     <div>
       <Header />
       <RouteSelector currentRoute={currentRoute} setRoute={setRoute} />
-      <StatusDisplay
-        operatingStatus={operatingStatus}
-        nextBusDeparture={nextBusDeparture}
-        minutesToNextBus={minutesToNextBus}
-        onUpdate={fetchBusSchedule}
-      />
+      <StatusDisplay operatingStatus={operatingStatus} nextBusDeparture={nextBusDeparture} minutesToNextBus={minutesToNextBus} />
       <Timetable
         busSchedule={busSchedule}
         currentRoute={currentRoute}
