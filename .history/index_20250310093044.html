@@ -243,11 +243,9 @@
         const SPREADSHEET_ID = 'AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3';
         const SHEET_NAME = 'Sheet1';
         
-        // Google Apps Script Webアプリケーションのデプロイ先URL
+        // Google Apps Script Webアプリケーションのデプロイ先URL（CORS対応のため）
+        // 注: 実際の使用前にデプロイする必要があります
         const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3/exec';
-        
-        // CORS対応のためのプロキシURL（必要に応じて変更）
-        const CORS_PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
         
         const WEATHER_API_KEY = 'aedbab52747a52984fdcedcb196bc105';
         const WEATHER_CITY_ID = '1851604'; // 蟹江町の都市ID
@@ -393,134 +391,81 @@
             }
         }
 
-        // JSONP形式でデータを取得する関数
-        function fetchJSONP(url, callback) {
-            return new Promise((resolve, reject) => {
-                // コールバック関数名をユニークにするためにタイムスタンプを使用
-                const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-                
-                // グローバルスコープにコールバック関数を定義
-                window[callbackName] = function(data) {
-                    // クリーンアップ
-                    delete window[callbackName];
-                    document.body.removeChild(script);
-                    resolve(data);
-                };
-                
-                // スクリプトタグを作成
-                const script = document.createElement('script');
-                script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + callbackName;
-                script.onerror = reject;
-                document.body.appendChild(script);
-            });
-        }
-        
-        // スプレッドシートのデータを取得（GASのWeb APIを使用）
-        async function fetchBusSchedule() {
-            try {
-                console.log("バススケジュールデータの取得を開始します");
-                
-                // 方法1: JSONP（クロスドメインリクエストに対応）
-                try {
-                    console.log("JSONP方式でデータ取得を試みます");
-                    const data = await fetchJSONP(GAS_WEB_APP_URL);
-                    console.log("JSONP経由で取得したデータ:", data);
-                    processScheduleData(data);
-                    return;
-                } catch (jsonpError) {
-                    console.warn("JSONP取得に失敗しました。代替方法を試みます:", jsonpError);
-                }
-                
-                // 方法2: CORSプロキシを使用
-                try {
-                    console.log("CORSプロキシ経由でデータ取得を試みます");
-                    const proxyUrl = CORS_PROXY_URL + GAS_WEB_APP_URL;
-                    const response = await fetch(proxyUrl);
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTPエラー: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    console.log("プロキシ経由で取得したデータ:", data);
-                    processScheduleData(data);
-                    return;
-                } catch (proxyError) {
-                    console.warn("プロキシ経由の取得に失敗しました:", proxyError);
-                }
-                
-                // 方法3: 直接フェッチ（CORS設定が適切な場合のみ動作）
-                console.log("直接フェッチを試みます");
-                const directResponse = await fetch(GAS_WEB_APP_URL, {
-                    method: "GET",
-                    mode: "cors", // CORSモードを明示的に指定
-                    headers: {
-                        "Content-Type": "application/json"
-                    }
-                });
-                
-                if (!directResponse.ok) {
-                    throw new Error(`HTTPエラー: ${directResponse.status}`);
-                }
-                
-                const data = await directResponse.json();
-                console.log("直接フェッチで取得したデータ:", data);
-                processScheduleData(data);
-                
-            } catch (error) {
-                console.error('すべてのデータ取得方法が失敗しました:', error);
-                errorContainerEl.textContent = `エラー: スプレッドシートデータの取得に失敗しました`;
-                errorContainerEl.style.display = 'block';
-                loadingEl.style.display = 'none';
-                
-                // フォールバック: ローカルデータを使用（オプション）
-                useFallbackData();
-                return null;
-            }
-        }
-        
-        // データ処理関数（データソースに関わらず共通の処理）
-        function processScheduleData(data) {
-            console.log("データ処理を開始します:", data);
-            
-            // スプレッドシートのデータから時刻表を抽出
-            const orangeWeekday = extractTimeSchedule(data.sheets.Sheet1.rows, 'orange', 'weekday');
-            const orangeHoliday = extractTimeSchedule(data.sheets.Sheet1.rows, 'orange', 'holiday');
-            const greenWeekday = extractTimeSchedule(data.sheets.Sheet1.rows, 'green', 'weekday');
-            const greenHoliday = extractTimeSchedule(data.sheets.Sheet1.rows, 'green', 'holiday');
-            
-            state.busSchedule = {
-                orange: {
-                    weekday: orangeWeekday,
-                    holiday: orangeHoliday
-                },
-                green: {
-                    weekday: greenWeekday,
-                    holiday: greenHoliday
-                }
-            };
-            
-            console.log("バススケジュールを設定しました:", state.busSchedule);
-        }
-        
-        // フォールバックデータを使用する関数（オプション）
-        function useFallbackData() {
-            console.log("フォールバックデータを使用します");
-            // ここに静的なフォールバックデータを定義できます
-            // 例: ハードコードされた時刻表
-            state.busSchedule = {
-                orange: {
-                    weekday: ["9:00", "10:30", "12:00", "13:30", "15:00", "16:30"],
-                    holiday: ["10:00", "12:00", "14:00", "16:00"]
-                },
-                green: {
-                    weekday: ["9:15", "10:45", "12:15", "13:45", "15:15", "16:45"],
-                    holiday: ["10:30", "12:30", "14:30", "16:30"]
-                }
-            };
-            
-            console.log("フォールバックデータを設定しました");
-        }
+//         async function fetchAllSheetsData() {
+//     try {
+//         const url = GAS_WEB_APP_URL; // 最新のGAS URL
+
+//         console.log("Fetching data from:", url);
+
+//         const response = await fetch(url, {
+//             method: "GET",
+//             headers: {
+//                 "Content-Type": "application/json"
+//             }
+//         });
+
+//         console.log("Response:", response);
+
+//         if (!response.ok) {
+//             throw new Error(`HTTPエラー: ${response.status}`);
+//         }
+
+//         const data = await response.json();
+//         console.log("取得したデータ:", data);
+
+//     } catch (error) {
+//         console.error("スプレッドシートデータの取得に失敗しました:", error);
+//     }
+// }
+
+// // 実行
+// fetchAllSheetsData();
+       
+//         // スプレッドシートのデータを取得（GASのWeb APIを使用）
+         async function fetchBusSchedule() {
+             try {
+                 const url = 'https://script.google.com/macros/s/AKfycbyPaFJzBosX76dc_Ckoff3QtX4T1w-pwO3ssX-DyGj3/exec';
+                 console.log("Fetching data from:", url);
+
+                 const response = await fetch(url, {
+                     method: "GET",
+                     headers: {
+                         "Content-Type": "application/json"
+                     }
+                 });
+                 if (!response.ok) {
+                     throw new Error(`HTTPエラー: ${response.status}`);
+                 }
+
+                 const data = await response.json();
+                 console.log("取得したデータ:", data);
+
+                 // スプレッドシートのデータから時刻表を抽出
+                 const orangeWeekday = extractTimeSchedule(data.sheets.Sheet1.rows, 'orange', 'weekday');
+                 const orangeHoliday = extractTimeSchedule(data.sheets.Sheet1.rows, 'orange', 'holiday');
+                 const greenWeekday = extractTimeSchedule(data.sheets.Sheet1.rows, 'green', 'weekday');
+                 const greenHoliday = extractTimeSchedule(data.sheets.Sheet1.rows, 'green', 'holiday');
+
+                 state.busSchedule = {
+                     orange: {
+                         weekday: orangeWeekday,
+                         holiday: orangeHoliday
+                     },
+                     green: {
+                         weekday: greenWeekday,
+                         holiday: greenHoliday
+                     }
+                 };
+
+             } catch (error) {
+                 console.error('スプレッドシートデータの読み込みに失敗しました:', error);
+                 errorContainerEl.textContent = `エラー: スプレッドシートデータの取得に失敗しました`;
+                 errorContainerEl.style.display = 'block';
+                 loadingEl.style.display = 'none';
+                 return null;
+             }
+    
+      }
 
 
       
@@ -580,25 +525,17 @@
         }
     }
         
-        // 気象条件を確認（CORS対応）
+        // 気象条件を確認
         async function checkWeatherConditions() {
             try {
-                // OpenWeatherMap APIを使用（CORS対応済みのAPI）
-                const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?id=${WEATHER_CITY_ID}&appid=${WEATHER_API_KEY}&units=metric&lang=ja`;
-                
-                console.log("気象データを取得します:", weatherUrl);
-                
-                const response = await fetch(weatherUrl, {
-                    method: "GET",
-                    mode: "cors" // CORSモードを明示的に指定
-                });
+                // OpenWeatherMap APIを使用
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?id=${WEATHER_CITY_ID}&appid=${WEATHER_API_KEY}&units=metric&lang=ja`);
                 
                 if (!response.ok) {
-                    throw new Error(`気象データの取得に失敗しました: ${response.status}`);
+                    throw new Error('気象データの取得に失敗しました');
                 }
                 
                 const data = await response.json();
-                console.log("取得した気象データ:", data);
                 const weatherId = data.weather[0].id;
                 
                 // 豪雨（大雨）、豪雪（大雪）、台風などの警報条件をチェック
