@@ -32,7 +32,6 @@ export default {
 		}
   
 		const data = await response.text();
-		console.loga(data);
 		return new Response(data, {
 		  status: 200,
 		  headers: {
@@ -41,7 +40,7 @@ export default {
 			"Content-Type": "application/json"
 		  }
 		});
-		
+  
 	  } catch (error) {
 		return new Response(`Fetch error: ${error.message}`, { status: 500 });
 	  }
